@@ -56,7 +56,7 @@ export const background = new Sprite({
         x: 0,
         y: 0
     },
-    imageSrc: '/assets/img/background.png'
+    imageSrc: '../assets/img/background.png'
 })
 
 export const shop = new Sprite({
@@ -64,7 +64,7 @@ export const shop = new Sprite({
         x: 620,
         y: 128
     },
-    imageSrc: '/assets/img/shop.png',
+    imageSrc: '../assets/img/shop.png',
     scale: 2.75,
     maxFrames: 6,
     holdFrames: 9
