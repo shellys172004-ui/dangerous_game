@@ -26,11 +26,14 @@ class Fighter extends Sprite {
         this.name = name
         this.height = 150
         this.width = 50
+
         this.velocity = { x: 0, y: 0 }
         this.moveFactor = 6
-        this.lastKey
+        this.lastKey = null
+
         this.inTheAir = false
         this.isAttacking = false
+        this.isTakingHit = false
         this.health = 100
 
         this.attackBox = {
@@ -41,7 +44,6 @@ class Fighter extends Sprite {
         }
 
         this.sprites = sprites
-
         for (const sprite in this.sprites) {
             this.sprites[sprite].image = new Image()
             this.sprites[sprite].image.src = this.sprites[sprite].imageSrc
@@ -50,72 +52,73 @@ class Fighter extends Sprite {
         this.keys = keys
         this.attackTime = attackTime
         this.attackCooldown = true
-        this.isTakingHit = false
     }
 
-    attack(enemyFighter) {
-        if (this.isAttacking && this.health > 0 && this.attackCooldown) {
-            this.attackCooldown = false
-            setTimeout(() => (this.attackCooldown = true), 1000)
+    attack(enemy) {
+        if (!this.attackCooldown || this.health <= 0) return
 
-            this.switchSprite('attack')
+        this.isAttacking = true
+        this.attackCooldown = false
+        this.switchSprite('attack')
 
-            if (this.isHitting(enemyFighter)) {
-                enemyFighter.health -= 20
-                gsap.to(`#${enemyFighter.name}Health`, {
-                    width: enemyFighter.health + '%'
-                })
-                enemyFighter.switchSprite('takehit')
-                enemyFighter.isTakingHit = true
-            }
+        setTimeout(() => {
+            this.isAttacking = false
+            this.attackCooldown = true
+        }, this.attackTime)
+
+        if (this.isHitting(enemy)) {
+            enemy.health -= 20
+            enemy.switchSprite('takehit')
+            enemy.isTakingHit = true
         }
     }
 
-    isHitting(enemyFighter) {
+    isHitting(enemy) {
         return (
-            this.attackBox.position.x + this.attackBox.width >= enemyFighter.position.x &&
-            this.attackBox.position.x <= enemyFighter.position.x + enemyFighter.width &&
-            this.attackBox.position.y + this.attackBox.height >= enemyFighter.position.y &&
-            this.attackBox.position.y <= enemyFighter.position.y + enemyFighter.height
+            this.attackBox.position.x + this.attackBox.width >= enemy.position.x &&
+            this.attackBox.position.x <= enemy.position.x + enemy.width &&
+            this.attackBox.position.y + this.attackBox.height >= enemy.position.y &&
+            this.attackBox.position.y <= enemy.position.y + enemy.height
         )
     }
 
     movement() {
         let running = false
 
-        if (this.health > 0) {
-            if (
-                Object.values(this.keys)[0].pressed &&
-                (this.lastKey === 'a' || this.lastKey === 'ArrowLeft') &&
-                this.position.x >= 0
-            ) {
-                this.velocity.x = -this.moveFactor
-                this.switchSprite('run')
-                running = true
-            } else if (
-                Object.values(this.keys)[1].pressed &&
-                (this.lastKey === 'd' || this.lastKey === 'ArrowRight') &&
-                this.position.x <= canvas.width - this.width
-            ) {
-                this.velocity.x = this.moveFactor
-                this.switchSprite('run')
-                running = true
-            }
+        if (this.health <= 0) return false
+
+        if (
+            Object.values(this.keys)[0].pressed &&
+            (this.lastKey === 'a' || this.lastKey === 'ArrowLeft')
+        ) {
+            this.velocity.x = -this.moveFactor
+            this.switchSprite('run')
+            running = true
+        } else if (
+            Object.values(this.keys)[1].pressed &&
+            (this.lastKey === 'd' || this.lastKey === 'ArrowRight')
+        ) {
+            this.velocity.x = this.moveFactor
+            this.switchSprite('run')
+            running = true
         }
 
         return running
     }
 
     update() {
+        // 🔥 CRITICAL FIX
+        this.velocity.x = 0
+
         super.update()
 
         this.attackBox.position.x = this.position.x + this.attackBox.offSet.x
         this.attackBox.position.y = this.position.y
 
-        this.position.y += this.velocity.y
         this.position.x += this.velocity.x
+        this.position.y += this.velocity.y
 
-        if (this.position.y + this.height + this.velocity.y >= canvas.height - 95) {
+        if (this.position.y + this.height >= canvas.height - 95) {
             this.velocity.y = 0
             this.inTheAir = false
         } else {
@@ -128,58 +131,69 @@ class Fighter extends Sprite {
                 this.switchSprite('jump')
             }
         }
+
+        // 🔥 DEFAULT STATE
+        if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
+            this.switchSprite('idle')
+        }
     }
 
     switchSprite(sprite) {
         switch (sprite) {
             case 'idle':
-                if (this.image !== this.sprites.idle.image && !this.inTheAir && this.health > 0) {
+                if (this.image !== this.sprites.idle.image) {
                     this.image = this.sprites.idle.image
                     this.maxFrames = this.sprites.idle.maxFrames
                     this.currentFrame = 0
                 }
                 break
+
             case 'run':
-                if (!this.isAttacking && !this.isTakingHit) {
+                if (!this.isAttacking) {
                     this.image = this.sprites.run.image
                     this.maxFrames = this.sprites.run.maxFrames
                 }
                 break
+
             case 'jump':
                 this.image = this.sprites.jump.image
                 this.maxFrames = this.sprites.jump.maxFrames
                 this.currentFrame = 0
                 break
+
             case 'fall':
                 this.image = this.sprites.fall.image
                 this.maxFrames = this.sprites.fall.maxFrames
                 this.currentFrame = 0
                 break
+
+            case 'attack':
+                this.image = this.sprites.attack1.image
+                this.maxFrames = this.sprites.attack1.maxFrames
+                this.currentFrame = 0
+                break
+
+            case 'takehit':
+                this.image = this.sprites.takeHit.image
+                this.maxFrames = this.sprites.takeHit.maxFrames
+                this.currentFrame = 0
+                setTimeout(() => (this.isTakingHit = false), 300)
+                break
+
             case 'death':
                 this.image = this.sprites.death.image
                 this.maxFrames = this.sprites.death.maxFrames
                 this.currentFrame = 0
                 break
-            case 'attack':
-                this.image = this.sprites.attack1.image
-                this.maxFrames = this.sprites.attack1.maxFrames
-                this.currentFrame = 0
-                setTimeout(() => (this.isAttacking = false), this.attackTime)
-                break
-            case 'takehit':
-                this.image = this.sprites.takeHit.image
-                this.maxFrames = this.sprites.takeHit.maxFrames
-                this.currentFrame = 0
-                setTimeout(() => (this.isTakingHit = false), 500)
-                break
         }
     }
 }
 
-// PLAYER
+/* ================= PLAYER ================= */
+
 export const player = new Fighter({
     name: 'player',
-    position: { x: 0, y: 0 },
+    position: { x: 100, y: 0 },
     offset: { x: 75, y: 0 },
     imageSrc: '../assets/img/samuraiMack/Idle.png',
     scale: 2.5,
@@ -195,14 +209,20 @@ export const player = new Fighter({
         attack1: { imageSrc: '../assets/img/samuraiMack/Attack1.png', maxFrames: 6 },
         takeHit: { imageSrc: '../assets/img/samuraiMack/Take hit White.png', maxFrames: 4 }
     },
-    keys: { a: { pressed: false }, d: { pressed: false }, w: { pressed: false }, ' ': { pressed: false } },
+    keys: {
+        a: { pressed: false },
+        d: { pressed: false },
+        w: { pressed: false },
+        ' ': { pressed: false }
+    },
     attackTime: 400
 })
 
-// ENEMY
+/* ================= ENEMY ================= */
+
 export const enemy = new Fighter({
     name: 'enemy',
-    position: { x: 950, y: 0 },
+    position: { x: 750, y: 0 },
     offset: { x: -160, y: 0 },
     imageSrc: '../assets/img/kenji/Idle.png',
     scale: 2.5,
