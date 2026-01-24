@@ -278,6 +278,7 @@ no.onclick=e=>{
   document.body.classList.add('crt');
   noModal.classList.add('active');
   heartbeat.play();
+  heartbeat.currentTime = 0;
   crackFromCenter(e.clientX,e.clientY);
 
   logoutTimer=setTimeout(()=>{
