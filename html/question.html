@@ -70,9 +70,8 @@ button{
   border-radius:6px;
   border:none;
   cursor:pointer;
-  position:relative; /* needed for radiators */
-  overflow: visible;
-  z-index: 1;
+  position:relative;
+  overflow:hidden; /* IMPORTANT: bars are INSIDE */
 }
 
 /* YES */
@@ -169,23 +168,13 @@ body.crt{animation:jitter .15s infinite}
   box-shadow:0 0 30px #00fff0;
 }
 
-/* SHARDS */
-.shard{
-  position:fixed;
-  width:30px;height:30px;
-  background:#00fff0;
-  clip-path:polygon(50% 0%,100% 30%,80% 100%,20% 100%,0% 30%);
-  box-shadow:0 0 20px #00fff0,0 0 40px rgba(0,255,240,.9);
-  pointer-events:none;
-  z-index:8;
-}
-
 /* BLUR */
 body.blur{
   filter:blur(6px) brightness(.85);
   transition:filter .6s ease;
 }
 
+/* OVERLAY */
 .tapOverlay{
   position:fixed;
   inset:0;
@@ -204,8 +193,8 @@ body.blur{
   border-radius:10px;
   text-shadow:0 0 18px #00fff0;
   color:#00fff0;
-  position:relative; /* for overlay radiators */
-  overflow: visible;
+  position:relative;
+  overflow:hidden; /* IMPORTANT: bars inside overlay */
 }
 
 /* --- 3-step overlay scaling --- */
@@ -213,72 +202,38 @@ body.blur{
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* =================== DENSE RADIATING SPECTRUM (CYAN) =================== */
-.radiators{
+/* ===================== INSIDE BARS (like glow logic) ===================== */
+.innerBars{
   position:absolute;
-  inset:-32px;                 /* outward aura distance */
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .12s linear;
-  z-index: 2;
-}
-.radiators.on{ opacity:1; }
-
-.rside{
-  position:absolute;
+  inset:0;
   display:flex;
-  gap:2px;                     /* tighter like your reference */
-  opacity:.95;
-}
-
-/* TOP + BOTTOM: thin vertical bars */
-.rside.top{
-  left:18px; right:18px; top:0;
-  height:28px;
   align-items:flex-end;
   justify-content:space-between;
+  padding:6px 8px;
+  pointer-events:none;
+  opacity:.0;                 /* off when silent */
+  transition:opacity .15s linear;
+  z-index:0;
 }
-.rside.bottom{
-  left:18px; right:18px; bottom:0;
-  height:28px;
-  align-items:flex-start;
-  justify-content:space-between;
-}
-.rbarV{
-  width:1px;                   /* finer */
+
+.innerBars.on{ opacity:.9; }
+
+.innerBars span{
+  width:2px;                  /* thin like your reference */
   height:2px;
-  background:#00fff0;
-  box-shadow:0 0 8px rgba(0,255,240,.85);
+  background:#00fff0;         /* cyan everywhere */
+  box-shadow:0 0 10px rgba(0,255,240,.85);
+  border-radius:2px;
   transform-origin:bottom;
-  transform:scaleY(.08);
 }
-.rbarV.down{ transform-origin:top; }
 
-/* LEFT + RIGHT: thin horizontal bars */
-.rside.left{
-  top:18px; bottom:18px; left:0;
-  width:28px;
-  flex-direction:column;
-  align-items:flex-end;
-  justify-content:space-between;
+/* keep text above bars */
+button .label, .tapOverlay span .label{
+  position:relative;
+  z-index:2;
 }
-.rside.right{
-  top:18px; bottom:18px; right:0;
-  width:28px;
-  flex-direction:column;
-  align-items:flex-start;
-  justify-content:space-between;
-}
-.rbarH{
-  height:1px;                  /* finer */
-  width:2px;
-  background:#00fff0;
-  box-shadow:0 0 8px rgba(0,255,240,.85);
-  transform-origin:right;
-  transform:scaleX(.08);
-}
-.rbarH.right{ transform-origin:left; }
-/* ====================================================================== */
+.tapOverlay span .label{ display:inline-block; }
+/* ======================================================================= */
 
 </style>
 </head>
@@ -291,8 +246,16 @@ body.blur{
 
 <div class="ui" id="mainUI">
   <h2 id="question">Will you be my valentine?</h2>
-  <button id="yes">YES</button>
-  <button id="no">NO</button>
+
+  <button id="yes">
+    <div class="innerBars" data-bars="yes"></div>
+    <span class="label">YES</span>
+  </button>
+
+  <button id="no">
+    <div class="innerBars" data-bars="no"></div>
+    <span class="label">NO</span>
+  </button>
 </div>
 
 <div class="transition" id="transition">
@@ -307,7 +270,10 @@ body.blur{
 </div>
 
 <div class="tapOverlay step1" id="tapOverlay">
-  <span id="tapOverlayText">Click if you really want to enter.</span>
+  <span id="tapOverlayText">
+    <div class="innerBars" data-bars="overlay"></div>
+    <span class="label">Click if you really want to enter.</span>
+  </span>
 </div>
 
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
@@ -358,7 +324,7 @@ function ensureAudioVisuals(){
   if(audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 4096;               // denser bins => smoother visualizer
+  analyser.fftSize = 1024;
   dataArr = new Uint8Array(analyser.frequencyBinCount);
   analyser.connect(audioCtx.destination);
 }
@@ -386,196 +352,93 @@ function setActiveAudio(el){
 }
 /* ========================================================== */
 
-/* ===================== RADIATORS BUILD ===================== */
-function makeBars(n, cls){
-  const frag=document.createDocumentFragment();
-  for(let i=0;i<n;i++){
+/* ===================== BUILD BARS (INSIDE) ===================== */
+function fillBars(container, count){
+  container.innerHTML = '';
+  for(let i=0;i<count;i++){
     const b=document.createElement('span');
-    b.className = cls;
-    frag.appendChild(b);
+    container.appendChild(b);
   }
-  return frag;
+  return [...container.querySelectorAll('span')];
 }
 
-function attachRadiators(target, topCount=96, sideCount=34){
-  const r=document.createElement('div');
-  r.className='radiators';
+const yesBarWrap = yes.querySelector('.innerBars');
+const noBarWrap = no.querySelector('.innerBars');
+const ovBarWrap = tapOverlayText.querySelector('.innerBars');
 
-  const top=document.createElement('div');
-  top.className='rside top';
-  top.appendChild(makeBars(topCount,'rbarV'));
+const YES_BARS = fillBars(yesBarWrap, 36);
+const NO_BARS  = fillBars(noBarWrap, 36);
+const OV_BARS  = fillBars(ovBarWrap, 40);
 
-  const bottom=document.createElement('div');
-  bottom.className='rside bottom';
-  bottom.appendChild(makeBars(topCount,'rbarV down'));
+/* Use the same "loudness-style" logic as the question glow:
+   - Pick a mid frequency bin (feels musical)
+   - Use squared amplitude for smoothness
+   - Apply smoothing so it pulses nicely
+*/
+let smooth = 0;
 
-  const left=document.createElement('div');
-  left.className='rside left';
-  left.appendChild(makeBars(sideCount,'rbarH'));
-
-  const right=document.createElement('div');
-  right.className='rside right';
-  right.appendChild(makeBars(sideCount,'rbarH right'));
-
-  r.appendChild(top);
-  r.appendChild(bottom);
-  r.appendChild(left);
-  r.appendChild(right);
-
-  target.appendChild(r);
-
-  // "peak hold" buffers: separate from instant values
-  return {
-    root:r,
-    topBars:[...top.children],
-    bottomBars:[...bottom.children],
-    leftBars:[...left.children],
-    rightBars:[...right.children],
-    topVal:new Float32Array(topCount),
-    botVal:new Float32Array(topCount),
-    leftVal:new Float32Array(sideCount),
-    rightVal:new Float32Array(sideCount),
-    topPeak:new Float32Array(topCount),
-    botPeak:new Float32Array(topCount),
-    leftPeak:new Float32Array(sideCount),
-    rightPeak:new Float32Array(sideCount)
-  };
+function setBarsOn(wrap, on){
+  if(on) wrap.classList.add('on');
+  else wrap.classList.remove('on');
 }
 
-// cyan everywhere: yes/no/overlay box
-const yesRad = attachRadiators(yes, 96, 34);
-const noRad  = attachRadiators(no,  96, 34);
-const overlayRad = attachRadiators(tapOverlayText, 96, 34);
-/* ========================================================== */
+function animateBarSet(bars, strength){
+  // strength: 0..1 (already smooth & musical)
+  const base = 2;
+  const maxH = 26;
+  const n = bars.length;
 
-/* ===================== DENSE SPECTRUM + PEAK HOLD ===================== */
-let visRAF = null;
-
-function setRadiatorsOn(rad, on){
-  if(on) rad.root.classList.add('on');
-  else rad.root.classList.remove('on');
-}
-
-function resetRadiators(rad){
-  setRadiatorsOn(rad,false);
-  for(const b of rad.topBars){ b.style.height='2px'; }
-  for(const b of rad.bottomBars){ b.style.height='2px'; }
-  for(const b of rad.leftBars){ b.style.width='2px'; }
-  for(const b of rad.rightBars){ b.style.width='2px'; }
-
-  rad.topVal.fill(0); rad.botVal.fill(0); rad.leftVal.fill(0); rad.rightVal.fill(0);
-  rad.topPeak.fill(0); rad.botPeak.fill(0); rad.leftPeak.fill(0); rad.rightPeak.fill(0);
-}
-
-function applySideBarsV(bars, valArr, peakArr, scalePx){
-  for(let i=0;i<bars.length;i++){
-    const h = Math.max(2, 2 + peakArr[i]*scalePx);
-    bars[i].style.height = h + 'px';
+  for(let i=0;i<n;i++){
+    // A clean “equalizer” distribution:
+    // center a bit taller, edges a bit shorter (like the ref image)
+    const t = i/(n-1);
+    const curve = 0.65 + 0.35*Math.sin(t*Math.PI); // 0.65..1.0..0.65
+    const h = base + (strength*strength) * maxH * curve;
+    bars[i].style.height = Math.max(2, h) + 'px';
   }
-}
-function applySideBarsH(bars, valArr, peakArr, scalePx){
-  for(let i=0;i<bars.length;i++){
-    const w = Math.max(2, 2 + peakArr[i]*scalePx);
-    bars[i].style.width = w + 'px';
-  }
-}
-
-function applySpectrum(rad, freq, gain=1){
-  // Rise fast, fall smooth like a real visualizer
-  const fall = 0.78;          // value decay (faster)
-  const peakFall = 0.92;      // peak decay (slower => peak-hold feel)
-
-  const topN = rad.topBars.length;
-  const sideN = rad.leftBars.length;
-  const total = topN + sideN + topN + sideN;
-
-  // Choose a musically nice band:
-  // skip the first few bins (rumble), avoid ultra-high noise
-  const startBin = 10;
-  const endBin = Math.min(freq.length-1, 640);
-  const band = Math.max(1, endBin - startBin);
-
-  // helper: sample bin index for a given perimeter position [0..total)
-  function binFor(pos){
-    return startBin + Math.floor((pos / total) * band);
-  }
-
-  // Update top
-  for(let i=0;i<topN;i++){
-    const v = freq[binFor(i)] / 255;
-    const s = (v*v) * gain;                   // squared for nicer dynamics
-    rad.topVal[i] = Math.max(s, rad.topVal[i]*fall);
-    rad.topPeak[i] = Math.max(rad.topVal[i], rad.topPeak[i]*peakFall);
-  }
-  // Update right
-  for(let i=0;i<sideN;i++){
-    const v = freq[binFor(topN + i)] / 255;
-    const s = (v*v) * gain;
-    rad.rightVal[i] = Math.max(s, rad.rightVal[i]*fall);
-    rad.rightPeak[i] = Math.max(rad.rightVal[i], rad.rightPeak[i]*peakFall);
-  }
-  // Update bottom
-  for(let i=0;i<topN;i++){
-    const v = freq[binFor(topN + sideN + i)] / 255;
-    const s = (v*v) * gain;
-    rad.botVal[i] = Math.max(s, rad.botVal[i]*fall);
-    rad.botPeak[i] = Math.max(rad.botVal[i], rad.botPeak[i]*peakFall);
-  }
-  // Update left
-  for(let i=0;i<sideN;i++){
-    const v = freq[binFor(topN + sideN + topN + i)] / 255;
-    const s = (v*v) * gain;
-    rad.leftVal[i] = Math.max(s, rad.leftVal[i]*fall);
-    rad.leftPeak[i] = Math.max(rad.leftVal[i], rad.leftPeak[i]*peakFall);
-  }
-
-  // px scale: keep it crisp & not too huge
-  const vScale = 54;
-  const hScale = 54;
-
-  applySideBarsV(rad.topBars, rad.topVal, rad.topPeak, vScale);
-  applySideBarsV(rad.bottomBars, rad.botVal, rad.botPeak, vScale);
-  applySideBarsH(rad.leftBars, rad.leftVal, rad.leftPeak, hScale);
-  applySideBarsH(rad.rightBars, rad.rightVal, rad.rightPeak, hScale);
 }
 
 function visualLoop(){
   const playing = analyser && currentAudioEl && !currentAudioEl.paused;
 
   if(!playing){
-    resetRadiators(yesRad);
-    resetRadiators(noRad);
-    resetRadiators(overlayRad);
-    visRAF = requestAnimationFrame(visualLoop);
+    smooth *= 0.90;
+    setBarsOn(yesBarWrap,false);
+    setBarsOn(noBarWrap,false);
+    setBarsOn(ovBarWrap,false);
+    requestAnimationFrame(visualLoop);
     return;
   }
-  yesRad.root.style.opacity = '1';
-  noRad.root.style.opacity = '1';
-  overlayRad.root.style.opacity = '1';
-
 
   analyser.getByteFrequencyData(dataArr);
 
-  setRadiatorsOn(yesRad,true);
-  setRadiatorsOn(noRad,true);
-  setRadiatorsOn(overlayRad,true);
-
-  // Feel-intent bias per scene (still using real bins)
-  const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
-  const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
-  const ovGain  = 1.0;
-
-  applySpectrum(yesRad, dataArr, yesGain);
-  applySpectrum(noRad, dataArr, noGain);
-  applySpectrum(overlayRad, dataArr, ovGain);
-
-  // subtle question breathing based on a mid bin
+  // Use a mid bin like your question glow does
   const midBin = Math.min(110, dataArr.length-1);
   const v = dataArr[midBin]/255;
-  const qGlow = Math.round(25 + (v*v)*85);
+
+  // smooth loudness
+  const target = v*v;
+  smooth = smooth*0.82 + target*0.18;
+
+  // show bars only when actually audible
+  const on = smooth > 0.01;
+  setBarsOn(yesBarWrap,on);
+  setBarsOn(noBarWrap,on);
+  setBarsOn(ovBarWrap,on);
+
+  // bias per scene but still same musical feel
+  const yesGain = (currentAudioEl === happySound) ? 1.15 : 1.0;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.25 : 0.95;
+
+  animateBarSet(YES_BARS, smooth*yesGain);
+  animateBarSet(NO_BARS,  smooth*noGain);
+  animateBarSet(OV_BARS,  smooth);
+
+  // keep your perfect question glow
+  const qGlow = Math.round(25 + smooth*85);
   questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
 
-  visRAF = requestAnimationFrame(visualLoop);
+  requestAnimationFrame(visualLoop);
 }
 /* ========================================================== */
 
@@ -660,13 +523,11 @@ function crackSeed(x, y) {
     glass.appendChild(p);
   }
 }
-
 function crackGrowth() {
   const centerX = window.innerWidth / 2;
   const centerY = window.innerHeight / 2;
   crackSeed(centerX, centerY);
 }
-
 growthInterval = setInterval(crackGrowth, 1000);
 
 /* SHARDS */
@@ -730,9 +591,11 @@ function setOverlayStep(step){
   tapOverlay.classList.remove('step1','step2','step3');
   tapOverlay.classList.add('step'+step);
 
-  if(step===1) tapOverlayText.textContent = "Click if you really want to enter.";
-  if(step===2) tapOverlayText.textContent = "You can still turn back.";
-  if(step===3) tapOverlayText.textContent = "Enter at your own risk.";
+  const label = tapOverlayText.querySelector('.label');
+
+  if(step===1) label.textContent = "Click if you really want to enter.";
+  if(step===2) label.textContent = "You can still turn back.";
+  if(step===3) label.textContent = "Enter at your own risk.";
 }
 
 setOverlayStep(1);
@@ -760,7 +623,11 @@ async function unlockAndStartQuestion(){
   ensureAudioVisuals();
   try{ await audioCtx.resume(); }catch(e){}
 
-  if(!visRAF) visualLoop();
+  // start visual loop once (this drives glow + bars)
+  if(!window.__visStarted){
+    window.__visStarted = true;
+    visualLoop();
+  }
 
   try{
     setActiveAudio(questionSound);
