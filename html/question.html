@@ -297,9 +297,7 @@ back.onclick=()=>{
   mainUI.classList.remove('hidden');
   happySound.pause();
   happySound.currentTime = 0;
-  questionSound.play().catch(()=>{});
-
-
+  /* questionSound MUST NOT resume once paused, so no play() here */
 };
 
 /* NO DODGE */
@@ -430,6 +428,7 @@ yes.style.pointerEvents = 'none';
 no.style.pointerEvents = 'none';
 
 let overlayStep = 1;
+let questionStartedOnce = false;
 
 function setOverlayStep(step){
   overlayStep = step;
@@ -444,12 +443,15 @@ function setOverlayStep(step){
 setOverlayStep(1);
 
 async function unlockAndStartQuestion(){
-  // Start question sound on step 1 (your requirement)
-  try{
-    await questionSound.play();
-  }catch(e){
-    // If blocked, keep overlay and allow retry
-    return;
+  // Start question sound only ONCE (must not resume later)
+  if(!questionStartedOnce){
+    try{
+      await questionSound.play();
+      questionStartedOnce = true;
+    }catch(e){
+      // If blocked, keep overlay and allow retry
+      return;
+    }
   }
 
   // advance overlay steps
