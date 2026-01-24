@@ -392,15 +392,28 @@ function polygonShardFall(centerX, centerY){
 const style=document.createElement('style');
 style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
 document.head.appendChild(style);
-document.addEventListener('click', () => {
+// Start questionSound on the very first user gesture on the page.
+// Use CAPTURE so it runs before YES/NO click handlers.
+function startQuestionSoundOnFirstGesture(){
+  // Only start if we are still on the question page (not in yes/no screens)
   if (
     !transition.classList.contains('active') &&
     !noModal.classList.contains('active')
   ) {
     questionSound.currentTime = 0;
-    questionSound.play();
+    questionSound.play().catch(()=>{});
   }
-}, { once: true });
+  document.removeEventListener('pointerdown', startQuestionSoundOnFirstGesture, true);
+  document.removeEventListener('click', startQuestionSoundOnFirstGesture, true);
+  document.removeEventListener('touchstart', startQuestionSoundOnFirstGesture, true);
+  document.removeEventListener('keydown', startQuestionSoundOnFirstGesture, true);
+}
+
+document.addEventListener('pointerdown', startQuestionSoundOnFirstGesture, true);
+document.addEventListener('click', startQuestionSoundOnFirstGesture, true);
+document.addEventListener('touchstart', startQuestionSoundOnFirstGesture, true);
+document.addEventListener('keydown', startQuestionSoundOnFirstGesture, true);
+
 
 </script>
 
