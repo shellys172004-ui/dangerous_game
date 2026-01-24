@@ -203,6 +203,11 @@ body.blur{
   color:#00fff0;
 }
 
+/* --- ADDED: 3-step overlay scaling (same style, bigger each time) --- */
+.tapOverlay.step1 span{ font-size:1.05rem; transform:scale(1); }
+.tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
+.tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
+
 </style>
 </head>
 
@@ -230,8 +235,8 @@ body.blur{
   <button id="apology">Sorry, I meant YES!!!!</button>
 </div>
 
-<div class="tapOverlay" id="tapOverlay">
-  <span> Enter at your own risk. </span>
+<div class="tapOverlay step1" id="tapOverlay">
+  <span id="tapOverlayText">Click if you really want to enter.</span>
 </div>
 
 
@@ -419,25 +424,51 @@ document.head.appendChild(style);
 // Use CAPTURE so it runs before YES/NO click handlers.
 /* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
 const tapOverlay = document.getElementById('tapOverlay');
+const tapOverlayText = document.getElementById('tapOverlayText');
 
 // Block YES/NO until audio is unlocked
 yes.style.pointerEvents = 'none';
 no.style.pointerEvents = 'none';
 
-function unlockAndStartQuestion(){
+let overlayStep = 1;
+
+function setOverlayStep(step){
+  overlayStep = step;
+  tapOverlay.classList.remove('step1','step2','step3');
+  tapOverlay.classList.add('step'+step);
+
+  if(step===1) tapOverlayText.textContent = "Click if you really want to enter.";
+  if(step===2) tapOverlayText.textContent = "You can still turn back.";
+  if(step===3) tapOverlayText.textContent = "Enter at your own risk.";
+}
+
+setOverlayStep(1);
+
+async function unlockAndStartQuestion(){
+  // Start question sound on step 1 (your requirement)
+  questionSound.currentTime = 0;
+  try{
+    await questionSound.play();
+  }catch(e){
+    // If blocked, keep overlay and allow retry
+    return;
+  }
+
+  // advance overlay steps
+  if(overlayStep < 3){
+    setOverlayStep(overlayStep + 1);
+    return;
+  }
+
+  // step 3 -> enter
   tapOverlay.classList.add('hidden');
   yes.style.pointerEvents = '';
   no.style.pointerEvents = '';
-
-  // Start question sound ONLY on question page
-  questionSound.currentTime = 0;
-  questionSound.play().catch(()=>{});
 }
 
-// Capture first real user gesture
-tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { once:true });
-tapOverlay.addEventListener('click', unlockAndStartQuestion, { once:true });
-
+// Click progresses: 1->2->3->enter (audio starts on first click)
+tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion);
+tapOverlay.addEventListener('click', unlockAndStartQuestion);
 
 </script>
 
