@@ -65,45 +65,37 @@ happySound.volume = 1;
 
 let audioUnlocked = false;
 
-function stopAudio(a){
-  a.pause();
-  a.currentTime = 0;
-}
-
-function playOnly(target){
-  // stop + reset others
+// --- helpers ---
+function stopAllAudio(){
   [questionSound, heartbeat, happySound].forEach(a => {
-    if (a !== target) stopAudio(a);
+    a.pause();
+    a.currentTime = 0;
   });
-  // play target from start
-  target.currentTime = 0;
-  target.play().catch(()=>{});
 }
 
-function syncAudio(){
-  // Determine which "screen" is active and play ONLY that audio
-  const onYesPage = transition.classList.contains('active');
-  const onNoModal = noModal.classList.contains('active');
+function playOnly(audioEl){
+  // ensure ONLY this one is audible/playing
+  [questionSound, heartbeat, happySound].forEach(a => {
+    if (a !== audioEl){
+      a.pause();
+      a.currentTime = 0;
+    }
+  });
+  // start requested sound (if unlocked; otherwise it will start right after unlock)
+  audioEl.currentTime = 0;
+  audioEl.play().catch(()=>{});
+}
 
-  if (!audioUnlocked) return;
-
-  if (onYesPage){
-    // YES page => happy only
-    playOnly(happySound);
-  } else if (onNoModal){
-    // NO modal => heartbeat only
-    playOnly(heartbeat);
-  } else {
-    // Question page => questionSound only
-    playOnly(questionSound);
-  }
+function startQuestionPageAudio(){
+  // question page => questionSound only
+  playOnly(questionSound);
 }
 
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
 
-  // Prime all audio silently so first real play works immediately
+  // Prime all audio elements silently (so first real play works immediately)
   [questionSound, heartbeat, happySound].forEach(a => {
     try{
       a.muted = true;
@@ -114,7 +106,7 @@ function unlockAudioOnce(){
           a.currentTime = 0;
           a.muted = false;
         }).catch(()=>{ a.muted = false; });
-      } else {
+      }else{
         a.pause();
         a.currentTime = 0;
         a.muted = false;
@@ -122,48 +114,54 @@ function unlockAudioOnce(){
     }catch(e){}
   });
 
-  // After unlocking, play the correct sound for the CURRENT screen
-  syncAudio();
+  // After the first user gesture, we are allowed to start the CURRENT page audio.
+  // Right now the current page is the question page.
+  startQuestionPageAudio();
 }
 
-// Unlock on first user gesture
+// Unlock on first user gesture (click/touch/keydown)
 ['pointerdown','touchstart','keydown','click'].forEach(evt => {
   document.addEventListener(evt, unlockAudioOnce, { once:true, passive:true });
 });
 
-// --- UI actions ---
+// --- UI transitions ---
 function showYes(){
   mainUI.classList.add('hidden');
   noModal.classList.remove('active');
   transition.classList.add('active');
-  syncAudio();
+
+  // yes page => happySound only
+  playOnly(happySound);
 }
 
 yes.onclick = () => {
-  unlockAudioOnce();     // ensure unlocked even if YES is first click
+  if (!audioUnlocked) unlockAudioOnce();
   showYes();
 };
 
 apology.onclick = () => {
-  unlockAudioOnce();
+  if (!audioUnlocked) unlockAudioOnce();
   showYes();
 };
 
 back.onclick = () => {
   transition.classList.remove('active');
   mainUI.classList.remove('hidden');
-  syncAudio();           // back to question page audio
+
+  // back to question page => questionSound only
+  if (!audioUnlocked) unlockAudioOnce();
+  startQuestionPageAudio();
 };
 
 no.onclick = () => {
-  unlockAudioOnce();     // ensure unlocked even if NO is first click
+  if (!audioUnlocked) unlockAudioOnce();
   noModal.classList.add('active');
-  syncAudio();
+
+  // no modal => heartbeat only
+  playOnly(heartbeat);
 };
 
-// Optional: if you click outside modal and want to return to question page,
-// you'd remove active and call syncAudio().
-
+// If you ever close the noModal another way in future, call startQuestionPageAudio() there.
 </script>
 
 </body>
