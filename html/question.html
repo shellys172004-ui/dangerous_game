@@ -191,7 +191,7 @@ body.blur{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:#000;          /* FULL BLACK */
+  background:#000;
   cursor:pointer;
 }
 .tapOverlay.hidden{display:none}
@@ -205,77 +205,76 @@ body.blur{
   position:relative; /* for overlay radiators */
 }
 
-/* --- 3-step overlay scaling (same style, bigger each time) --- */
+/* --- 3-step overlay scaling --- */
 .tapOverlay.step1 span{ font-size:1.05rem; transform:scale(1); }
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* =================== RADIATING SPECTRUM (CYAN) =================== */
+/* =================== DENSE RADIATING SPECTRUM (CYAN) =================== */
 .radiators{
   position:absolute;
-  inset:-28px;                 /* how far the spikes sit from the element */
+  inset:-32px;                 /* outward aura distance */
   pointer-events:none;
   opacity:0;
   transition:opacity .12s linear;
 }
 .radiators.on{ opacity:1; }
 
-/* leave corners clean (like your reference bar field) */
 .rside{
   position:absolute;
   display:flex;
-  gap:4px;
+  gap:2px;                     /* tighter like your reference */
   opacity:.95;
 }
 
 /* TOP + BOTTOM: thin vertical bars */
 .rside.top{
   left:18px; right:18px; top:0;
-  height:24px;
+  height:28px;
   align-items:flex-end;
   justify-content:space-between;
 }
 .rside.bottom{
   left:18px; right:18px; bottom:0;
-  height:24px;
+  height:28px;
   align-items:flex-start;
   justify-content:space-between;
 }
 .rbarV{
-  width:2px;
+  width:1px;                   /* finer */
   height:2px;
   background:#00fff0;
-  box-shadow:0 0 10px rgba(0,255,240,.85);
+  box-shadow:0 0 8px rgba(0,255,240,.85);
   transform-origin:bottom;
-  transform:scaleY(.1);
+  transform:scaleY(.08);
 }
 .rbarV.down{ transform-origin:top; }
 
 /* LEFT + RIGHT: thin horizontal bars */
 .rside.left{
   top:18px; bottom:18px; left:0;
-  width:24px;
+  width:28px;
   flex-direction:column;
   align-items:flex-end;
   justify-content:space-between;
 }
 .rside.right{
   top:18px; bottom:18px; right:0;
-  width:24px;
+  width:28px;
   flex-direction:column;
   align-items:flex-start;
   justify-content:space-between;
 }
 .rbarH{
-  height:2px;
+  height:1px;                  /* finer */
   width:2px;
   background:#00fff0;
-  box-shadow:0 0 10px rgba(0,255,240,.85);
+  box-shadow:0 0 8px rgba(0,255,240,.85);
   transform-origin:right;
-  transform:scaleX(.1);
+  transform:scaleX(.08);
 }
 .rbarH.right{ transform-origin:left; }
-/* ================================================================ */
+/* ====================================================================== */
 
 </style>
 </head>
@@ -292,7 +291,6 @@ body.blur{
   <button id="no">NO</button>
 </div>
 
-<!-- YES TRANSITION (RESTORED) -->
 <div class="transition" id="transition">
   <h1>"yAyAyAyAyAY" 🎮🔥</h1>
   <p>You made the wise choice 😌💙</p>
@@ -338,6 +336,8 @@ const glassSound=document.getElementById('glassSound');
 const happySound=document.getElementById('happySound');
 const questionSound=document.getElementById('questionSound');
 const questionEl=document.getElementById('question');
+const tapOverlay=document.getElementById('tapOverlay');
+const tapOverlayText=document.getElementById('tapOverlayText');
 
 questionSound.volume = 0.6;
 
@@ -354,7 +354,7 @@ function ensureAudioVisuals(){
   if(audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048; // smoother spectrum
+  analyser.fftSize = 4096;               // denser bins => smoother visualizer
   dataArr = new Uint8Array(analyser.frequencyBinCount);
   analyser.connect(audioCtx.destination);
 }
@@ -393,7 +393,7 @@ function makeBars(n, cls){
   return frag;
 }
 
-function attachRadiators(target, topCount=64, sideCount=22){
+function attachRadiators(target, topCount=96, sideCount=34){
   const r=document.createElement('div');
   r.className='radiators';
 
@@ -420,128 +420,119 @@ function attachRadiators(target, topCount=64, sideCount=22){
 
   target.appendChild(r);
 
-  const obj = {
+  // "peak hold" buffers: separate from instant values
+  return {
     root:r,
     topBars:[...top.children],
     bottomBars:[...bottom.children],
     leftBars:[...left.children],
     rightBars:[...right.children],
-    // smoothing buffers
-    topVals:new Float32Array(topCount),
-    bottomVals:new Float32Array(topCount),
-    leftVals:new Float32Array(sideCount),
-    rightVals:new Float32Array(sideCount)
+    topVal:new Float32Array(topCount),
+    botVal:new Float32Array(topCount),
+    leftVal:new Float32Array(sideCount),
+    rightVal:new Float32Array(sideCount),
+    topPeak:new Float32Array(topCount),
+    botPeak:new Float32Array(topCount),
+    leftPeak:new Float32Array(sideCount),
+    rightPeak:new Float32Array(sideCount)
   };
-  return obj;
 }
 
-// Radiators on YES, NO, and overlay text box (cyan everywhere)
-const yesRad = attachRadiators(yes, 72, 24);
-const noRad  = attachRadiators(no,  72, 24);
-const tapOverlay = document.getElementById('tapOverlay');
-const tapOverlayText = document.getElementById('tapOverlayText');
-const overlayRad = attachRadiators(tapOverlayText, 72, 24);
+// cyan everywhere: yes/no/overlay box
+const yesRad = attachRadiators(yes, 96, 34);
+const noRad  = attachRadiators(no,  96, 34);
+const overlayRad = attachRadiators(tapOverlayText, 96, 34);
 /* ========================================================== */
 
-/* ===================== SPECTRUM MAPPING ===================== */
-/*
-We use real frequency bins (not average).
-We sample a slice of the spectrum and map it across:
-top -> right -> bottom -> left (radiating outward).
-Also apply smoothing so it feels like a real music player.
-*/
+/* ===================== DENSE SPECTRUM + PEAK HOLD ===================== */
 let visRAF = null;
-
-function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-
-function updateSideBarsV(bars, vals, fromTop, scalePx, decay){
-  for(let i=0;i<bars.length;i++){
-    // vals already in 0..1
-    vals[i] = Math.max(vals[i]*decay, vals[i]); // safety
-    const h = Math.max(2, 2 + vals[i]*scalePx);
-    bars[i].style.height = h + 'px';
-    // direction already handled by transform-origin classes
-  }
-}
-
-function updateSideBarsH(bars, vals, scalePx, decay){
-  for(let i=0;i<bars.length;i++){
-    vals[i] = Math.max(vals[i]*decay, vals[i]);
-    const w = Math.max(2, 2 + vals[i]*scalePx);
-    bars[i].style.width = w + 'px';
-  }
-}
 
 function setRadiatorsOn(rad, on){
   if(on) rad.root.classList.add('on');
   else rad.root.classList.remove('on');
 }
 
-function applySpectrum(rad, freq, gain=1){
-  const decay = 0.82;            // smooth fall-off like music players
-  const topN = rad.topBars.length;
-  const sideN = rad.leftBars.length;
-
-  // pick a nice band of bins (skip sub-bass rumble, skip ultra-high hiss)
-  const startBin = 8;
-  const endBin = Math.min(freq.length-1, 520);
-  const band = endBin - startBin;
-
-  // total bars around all sides
-  const total = topN + sideN + topN + sideN;
-
-  // sample bins evenly across bar count
-  for(let i=0;i<topN;i++){
-    const bin = startBin + Math.floor((i / topN) * band);
-    const v = (freq[bin] / 255);
-    // smoothing: rise fast, fall slow
-    rad.topVals[i] = Math.max(rad.topVals[i]*decay, v*v*gain);
-  }
-  for(let i=0;i<sideN;i++){
-    const bin = startBin + Math.floor(((topN + i) / total) * band);
-    const v = (freq[bin] / 255);
-    rad.rightVals[i] = Math.max(rad.rightVals[i]*decay, v*v*gain);
-  }
-  for(let i=0;i<topN;i++){
-    const bin = startBin + Math.floor(((topN + sideN + i) / total) * band);
-    const v = (freq[bin] / 255);
-    rad.bottomVals[i] = Math.max(rad.bottomVals[i]*decay, v*v*gain);
-  }
-  for(let i=0;i<sideN;i++){
-    const bin = startBin + Math.floor(((topN + sideN + topN + i) / total) * band);
-    const v = (freq[bin] / 255);
-    rad.leftVals[i] = Math.max(rad.leftVals[i]*decay, v*v*gain);
-  }
-
-  // scale sizes (radiating feel)
-  const vScale = 46; // px
-  const hScale = 46; // px
-
-  // write to DOM
-  for(let i=0;i<topN;i++){
-    const h = Math.max(2, 2 + rad.topVals[i]*vScale);
-    rad.topBars[i].style.height = h + 'px';
-  }
-  for(let i=0;i<topN;i++){
-    const h = Math.max(2, 2 + rad.bottomVals[i]*vScale);
-    rad.bottomBars[i].style.height = h + 'px';
-  }
-  for(let i=0;i<sideN;i++){
-    const w = Math.max(2, 2 + rad.leftVals[i]*hScale);
-    rad.leftBars[i].style.width = w + 'px';
-  }
-  for(let i=0;i<sideN;i++){
-    const w = Math.max(2, 2 + rad.rightVals[i]*hScale);
-    rad.rightBars[i].style.width = w + 'px';
-  }
-}
-
 function resetRadiators(rad){
-  setRadiatorsOn(rad, false);
+  setRadiatorsOn(rad,false);
   for(const b of rad.topBars){ b.style.height='2px'; }
   for(const b of rad.bottomBars){ b.style.height='2px'; }
   for(const b of rad.leftBars){ b.style.width='2px'; }
   for(const b of rad.rightBars){ b.style.width='2px'; }
+
+  rad.topVal.fill(0); rad.botVal.fill(0); rad.leftVal.fill(0); rad.rightVal.fill(0);
+  rad.topPeak.fill(0); rad.botPeak.fill(0); rad.leftPeak.fill(0); rad.rightPeak.fill(0);
+}
+
+function applySideBarsV(bars, valArr, peakArr, scalePx){
+  for(let i=0;i<bars.length;i++){
+    const h = Math.max(2, 2 + peakArr[i]*scalePx);
+    bars[i].style.height = h + 'px';
+  }
+}
+function applySideBarsH(bars, valArr, peakArr, scalePx){
+  for(let i=0;i<bars.length;i++){
+    const w = Math.max(2, 2 + peakArr[i]*scalePx);
+    bars[i].style.width = w + 'px';
+  }
+}
+
+function applySpectrum(rad, freq, gain=1){
+  // Rise fast, fall smooth like a real visualizer
+  const fall = 0.78;          // value decay (faster)
+  const peakFall = 0.92;      // peak decay (slower => peak-hold feel)
+
+  const topN = rad.topBars.length;
+  const sideN = rad.leftBars.length;
+  const total = topN + sideN + topN + sideN;
+
+  // Choose a musically nice band:
+  // skip the first few bins (rumble), avoid ultra-high noise
+  const startBin = 10;
+  const endBin = Math.min(freq.length-1, 640);
+  const band = Math.max(1, endBin - startBin);
+
+  // helper: sample bin index for a given perimeter position [0..total)
+  function binFor(pos){
+    return startBin + Math.floor((pos / total) * band);
+  }
+
+  // Update top
+  for(let i=0;i<topN;i++){
+    const v = freq[binFor(i)] / 255;
+    const s = (v*v) * gain;                   // squared for nicer dynamics
+    rad.topVal[i] = Math.max(s, rad.topVal[i]*fall);
+    rad.topPeak[i] = Math.max(rad.topVal[i], rad.topPeak[i]*peakFall);
+  }
+  // Update right
+  for(let i=0;i<sideN;i++){
+    const v = freq[binFor(topN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.rightVal[i] = Math.max(s, rad.rightVal[i]*fall);
+    rad.rightPeak[i] = Math.max(rad.rightVal[i], rad.rightPeak[i]*peakFall);
+  }
+  // Update bottom
+  for(let i=0;i<topN;i++){
+    const v = freq[binFor(topN + sideN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.botVal[i] = Math.max(s, rad.botVal[i]*fall);
+    rad.botPeak[i] = Math.max(rad.botVal[i], rad.botPeak[i]*peakFall);
+  }
+  // Update left
+  for(let i=0;i<sideN;i++){
+    const v = freq[binFor(topN + sideN + topN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.leftVal[i] = Math.max(s, rad.leftVal[i]*fall);
+    rad.leftPeak[i] = Math.max(rad.leftVal[i], rad.leftPeak[i]*peakFall);
+  }
+
+  // px scale: keep it crisp & not too huge
+  const vScale = 54;
+  const hScale = 54;
+
+  applySideBarsV(rad.topBars, rad.topVal, rad.topPeak, vScale);
+  applySideBarsV(rad.bottomBars, rad.botVal, rad.botPeak, vScale);
+  applySideBarsH(rad.leftBars, rad.leftVal, rad.leftPeak, hScale);
+  applySideBarsH(rad.rightBars, rad.rightVal, rad.rightPeak, hScale);
 }
 
 function visualLoop(){
@@ -557,23 +548,23 @@ function visualLoop(){
 
   analyser.getByteFrequencyData(dataArr);
 
-  setRadiatorsOn(yesRad, true);
-  setRadiatorsOn(noRad, true);
-  setRadiatorsOn(overlayRad, true);
+  setRadiatorsOn(yesRad,true);
+  setRadiatorsOn(noRad,true);
+  setRadiatorsOn(overlayRad,true);
 
-  // bias feels intentional per scene, but STILL follows real bins
+  // Feel-intent bias per scene (still using real bins)
   const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
   const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
   const ovGain  = 1.0;
 
   applySpectrum(yesRad, dataArr, yesGain);
-  applySpectrum(noRad,  dataArr, noGain);
+  applySpectrum(noRad, dataArr, noGain);
   applySpectrum(overlayRad, dataArr, ovGain);
 
-  // subtle text breathing
-  const midBin = 90;
-  const v = (dataArr[Math.min(midBin, dataArr.length-1)]/255);
-  const qGlow = Math.round(25 + (v*v)*70);
+  // subtle question breathing based on a mid bin
+  const midBin = Math.min(110, dataArr.length-1);
+  const v = dataArr[midBin]/255;
+  const qGlow = Math.round(25 + (v*v)*85);
   questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
 
   visRAF = requestAnimationFrame(visualLoop);
@@ -641,45 +632,42 @@ no.onclick=e=>{
 
 // === CRACKS ===
 function crackSeed(x, y) {
-  for (let i = 0; i < 6; i++) { // number of main branches
+  for (let i = 0; i < 6; i++) {
     let path = `M ${x} ${y}`;
     let angle = Math.random() * Math.PI * 2;
     let cx = x, cy = y;
-    for (let j = 0; j < 8; j++) { // segments per branch
-      angle += (Math.random() - 0.5) * 1; // jaggedness
-      const len = 50 + Math.random() * 50; // variable length per segment
+    for (let j = 0; j < 8; j++) {
+      angle += (Math.random() - 0.5) * 1;
+      const len = 50 + Math.random() * 50;
       cx += Math.cos(angle) * len;
       cy += Math.sin(angle) * len;
       path += ` L ${cx} ${cy}`;
     }
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', path);
-    p.setAttribute('stroke', '#00fff0');       // neon color
-    p.setAttribute('stroke-width', '5');        // thicker line
+    p.setAttribute('stroke', '#00fff0');
+    p.setAttribute('stroke-width', '5');
     p.setAttribute('fill', 'none');
-    p.style.filter = 'drop-shadow(0 0 25px #00fff0) drop-shadow(0 0 15px #00fff0)'; // strong glow
+    p.style.filter = 'drop-shadow(0 0 25px #00fff0) drop-shadow(0 0 15px #00fff0)';
     glass.appendChild(p);
   }
 }
 
-// Growth function: adds new cracks over time from the center
 function crackGrowth() {
   const centerX = window.innerWidth / 2;
   const centerY = window.innerHeight / 2;
   crackSeed(centerX, centerY);
 }
 
-// Interval for progressive crack growth
-growthInterval = setInterval(crackGrowth, 1000); // every 1 second, faster growth
+growthInterval = setInterval(crackGrowth, 1000);
 
 /* SHARDS */
 function polygonShardFall(centerX, centerY){
-  const shardCount = 90; // more shards for full screen effect
+  const shardCount = 90;
   for(let i=0;i<shardCount;i++){
     const f = document.createElement('div');
     f.classList.add('fragment');
 
-    // Random polygon shapes for variety
     const shapes = [
       'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
       'polygon(0 0, 100% 10%, 90% 100%, 10% 90%)',
@@ -688,25 +676,20 @@ function polygonShardFall(centerX, centerY){
     ];
     f.style.clipPath = shapes[Math.floor(Math.random()*shapes.length)];
 
-    // Random size
-    const size = 15 + Math.random()*25; // 15-40px
+    const size = 15 + Math.random()*25;
     f.style.width = size + 'px';
     f.style.height = size + 'px';
 
-    // Neon color + glow
     f.style.background = '#00fff0';
     f.style.boxShadow = '0 0 20px #00fff0, 0 0 40px #00fff0';
 
-    // Start at center
     f.style.left = centerX + 'px';
     f.style.top = centerY + 'px';
 
-    // Random direction & distance
     const dx = (Math.random() - 0.5) * window.innerWidth * (0.8 + Math.random()*0.5);
     const dy = (Math.random() - 0.5) * window.innerHeight * (0.8 + Math.random()*0.5);
     const rot = Math.random()*720-360;
 
-    // Animate shards
     f.animate(
       [
         {transform: 'translate(0,0) rotate(0deg)', opacity:1},
@@ -716,8 +699,6 @@ function polygonShardFall(centerX, centerY){
     );
 
     document.body.appendChild(f);
-
-    // Remove after animation
     setTimeout(()=>f.remove(),2000);
   }
 }
@@ -748,7 +729,6 @@ function setOverlayStep(step){
 
 setOverlayStep(1);
 
-// Prime other sounds so first YES/NO click has zero lag
 function primeAudio(a){
   const prevMuted = a.muted;
   a.muted = true;
@@ -772,18 +752,15 @@ async function unlockAndStartQuestion(){
   ensureAudioVisuals();
   try{ await audioCtx.resume(); }catch(e){}
 
-  // start visualizer loop once
   if(!visRAF) visualLoop();
 
-  // Start question sound (first overlay click)
   try{
     setActiveAudio(questionSound);
     await questionSound.play();
   }catch(e){
-    return; // stay on overlay if blocked
+    return;
   }
 
-  // prime other sounds once for zero-lag first click
   if(!audioPrimed){
     audioPrimed = true;
     primeAudio(happySound);
@@ -791,19 +768,16 @@ async function unlockAndStartQuestion(){
     primeAudio(glassSound);
   }
 
-  // advance overlays (you must click each overlay)
   if(overlayStep < 3){
     setOverlayStep(overlayStep + 1);
     return;
   }
 
-  // step 3 -> enter
   tapOverlay.classList.add('hidden');
   yes.style.pointerEvents = '';
   no.style.pointerEvents = '';
 }
 
-// One click per overlay step (prevents skipping)
 tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
 
 </script>
