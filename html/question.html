@@ -182,6 +182,26 @@ body.blur{
   filter:blur(6px) brightness(.85);
   transition:filter .6s ease;
 }
+
+.tapOverlay{
+  position:fixed;inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.35);
+  backdrop-filter:blur(2px);
+  cursor:pointer;
+}
+.tapOverlay.hidden{display:none}
+.tapOverlay span{
+  padding:14px 18px;
+  border:1px solid #00fff0;
+  box-shadow:0 0 30px #00fff0;
+  border-radius:10px;
+  text-shadow:0 0 18px #00fff0;
+}
+
 </style>
 </head>
 
@@ -208,6 +228,11 @@ body.blur{
   <h2>I know that wasn’t intentional.</h2>
   <button id="apology">I meant YES</button>
 </div>
+
+<div class="tapOverlay" id="tapOverlay">
+  <span>Tap anywhere to start sound 🎧</span>
+</div>
+
 
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
 <audio id="glassSound" src="glass.mp3"></audio>
@@ -394,25 +419,26 @@ style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
 document.head.appendChild(style);
 // Start questionSound on the very first user gesture on the page.
 // Use CAPTURE so it runs before YES/NO click handlers.
-function startQuestionSoundOnFirstGesture(){
-  // Only start if we are still on the question page (not in yes/no screens)
-  if (
-    !transition.classList.contains('active') &&
-    !noModal.classList.contains('active')
-  ) {
-    questionSound.currentTime = 0;
-    questionSound.play().catch(()=>{});
-  }
-  document.removeEventListener('pointerdown', startQuestionSoundOnFirstGesture, true);
-  document.removeEventListener('click', startQuestionSoundOnFirstGesture, true);
-  document.removeEventListener('touchstart', startQuestionSoundOnFirstGesture, true);
-  document.removeEventListener('keydown', startQuestionSoundOnFirstGesture, true);
+/* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
+const tapOverlay = document.getElementById('tapOverlay');
+
+// Block YES/NO until audio is unlocked
+yes.style.pointerEvents = 'none';
+no.style.pointerEvents = 'none';
+
+function unlockAndStartQuestion(){
+  tapOverlay.classList.add('hidden');
+  yes.style.pointerEvents = '';
+  no.style.pointerEvents = '';
+
+  // Start question sound ONLY on question page
+  questionSound.currentTime = 0;
+  questionSound.play().catch(()=>{});
 }
 
-document.addEventListener('pointerdown', startQuestionSoundOnFirstGesture, true);
-document.addEventListener('click', startQuestionSoundOnFirstGesture, true);
-document.addEventListener('touchstart', startQuestionSoundOnFirstGesture, true);
-document.addEventListener('keydown', startQuestionSoundOnFirstGesture, true);
+// Capture first real user gesture
+tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { once:true });
+tapOverlay.addEventListener('click', unlockAndStartQuestion, { once:true });
 
 
 </script>
