@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Make Your Choice</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -16,392 +16,152 @@ body{
   background:radial-gradient(circle at top,#0e1a2f,#05070c);
   color:#00fff0;
 }
-
-/* BACKGROUND GRID */
-.background{
-  position:fixed;inset:0;
-  background:
-    repeating-linear-gradient(0deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px),
-    repeating-linear-gradient(90deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px);
-  animation:grid 12s linear infinite;
-  z-index:0;
-}
-@keyframes grid{to{background-position:0 36px,36px 0}}
-
-/* SPRINKLES */
-.sprinkles{position:fixed;inset:0;pointer-events:none;z-index:1}
-.sprinkle{
-  position:absolute;
-  width:4px;height:4px;
-  background:#00fff0;
-  box-shadow:0 0 12px #00fff0,0 0 30px #00fff0;
-  animation:float 6s linear infinite;
-}
-@keyframes float{
-  from{transform:translateY(100vh);opacity:0}
-  to{transform:translateY(-10vh);opacity:1}
-}
-
-/* UI */
-.ui{
-  position:relative;
-  z-index:3;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-}
+.ui{height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center}
 .ui.hidden{display:none}
-
-h2{
-  font-size:2.3rem;
-  text-shadow:0 0 25px #00fff0;
-  margin-bottom:20px;
-  animation:floatQ 3s ease-in-out infinite;
-}
-@keyframes floatQ{50%{transform:translateY(-10px)}}
-
-button{
-  padding:14px 40px;
-  margin:12px;
-  font-family:'Orbitron';
-  font-size:1rem;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-}
-
-/* YES */
-#yes{
-  background:linear-gradient(135deg,#00fff0,#00b3ff);
-  color:#000;
-  box-shadow:0 0 40px #00fff0;
-}
-
-/* NO */
-#no{
-  position:absolute;
-  background:#ff004c;
-  color:#fff;
-  box-shadow:0 0 35px #ff004c;
-}
-
-/* YES TRANSITION SCREEN (RESTORED) */
-.transition{
-  position:fixed;inset:0;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  opacity:0;
-  pointer-events:none;
-  z-index:6;
-  transition:opacity .6s ease;
-}
+button{padding:14px 40px;margin:12px;font-family:'Orbitron'}
+.transition{position:fixed;inset:0;display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none}
 .transition.active{opacity:1;pointer-events:auto}
-
-.transition h1{
-  font-size:2.2rem;
-  text-shadow:0 0 30px #00fff0;
-  animation:glitch .25s infinite;
-}
-@keyframes glitch{
-  25%{transform:translate(-2px,2px)}
-  50%{transform:translate(2px,-2px)}
-}
-
-.transition p{margin-top:12px;opacity:.85}
-
-/* GO BACK BUTTON */
-.transition button{
-  margin-top:30px;
-  background:transparent;
-  color:#00fff0;
-  border:1px solid #00fff0;
-  box-shadow:0 0 25px #00fff0;
-}
-.transition button:hover{
-  background:#00fff0;
-  color:#000;
-}
-
-/* CRT */
-body.crt::before{
-  content:'';
-  position:fixed;inset:0;
-  background:repeating-linear-gradient(
-    to bottom,
-    rgba(0,0,0,.25) 0,
-    rgba(0,0,0,.25) 1px,
-    transparent 2px
-  );
-  pointer-events:none;
-  z-index:20;
-}
-body.crt{animation:jitter .15s infinite}
-@keyframes jitter{50%{transform:translate(1px,-1px)}}
-
-/* GLASS */
-#glass{position:fixed;inset:0;pointer-events:none;z-index:4}
-
-/* NO MODAL */
-.noModal{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.85);
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  opacity:0;
-  pointer-events:none;
-  z-index:7;
-}
+.noModal{position:fixed;inset:0;background:#000c;display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none}
 .noModal.active{opacity:1;pointer-events:auto}
-
-.noModal button{
-  background:transparent;
-  color:#00fff0;
-  border:1px solid #00fff0;
-  box-shadow:0 0 30px #00fff0;
-}
-
-/* SHARDS */
-.shard{
-  position:fixed;
-  width:30px;height:30px;
-  background:#00fff0;
-  clip-path:polygon(50% 0%,100% 30%,80% 100%,20% 100%,0% 30%);
-  box-shadow:0 0 20px #00fff0,0 0 40px rgba(0,255,240,.9);
-  pointer-events:none;
-  z-index:8;
-}
-
-/* BLUR */
-body.blur{
-  filter:blur(6px) brightness(.85);
-  transition:filter .6s ease;
-}
 </style>
 </head>
 
 <body>
 
-<div class="background"></div>
-<div class="sprinkles" id="sprinkles"></div>
-<svg id="glass"></svg>
-
 <div class="ui" id="mainUI">
-  <h2 id="question">Will you be my valentine?</h2>
+  <h2>Will you be my valentine?</h2>
   <button id="yes">YES</button>
   <button id="no">NO</button>
 </div>
 
-<!-- YES TRANSITION (RESTORED) -->
 <div class="transition" id="transition">
-  <h1>"yAyAyAyAyAY" 🎮🔥</h1>
-  <p>You made the wise choice 😌💙</p>
   <button id="back">GO BACK</button>
 </div>
 
 <div class="noModal" id="noModal">
-  <h2>I know that wasn’t intentional.</h2>
   <button id="apology">I meant YES</button>
 </div>
 
-<audio id="heartbeat" src="heartbeat.mp3" loop></audio>
-<audio id="glassSound" src="glass.mp3"></audio>
-<audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
-<audio id="questionSound" src="question.mp3" loop></audio>
+<audio id="questionSound" src="question.mp3" loop preload="auto"></audio>
+<audio id="heartbeat" src="heartbeat.mp3" loop preload="auto"></audio>
+<audio id="happySound" src="happy_happy_happy_cat.mp3" preload="auto"></audio>
 
 <script>
-/* SPRINKLES */
-const sprinkles=document.getElementById('sprinkles');
-for(let i=0;i<50;i++){
-  const s=document.createElement('div');
-  s.className='sprinkle';
-  s.style.left=Math.random()*100+'%';
-  s.style.animationDelay=Math.random()*6+'s';
-  sprinkles.appendChild(s);
-}
+const yes = document.getElementById('yes');
+const no = document.getElementById('no');
+const back = document.getElementById('back');
+const apology = document.getElementById('apology');
+const mainUI = document.getElementById('mainUI');
+const transition = document.getElementById('transition');
+const noModal = document.getElementById('noModal');
 
-/* ELEMENTS */
-const yes=document.getElementById('yes');
-const no=document.getElementById('no');
-const mainUI=document.getElementById('mainUI');
-const transition=document.getElementById('transition');
-const back=document.getElementById('back');
-const noModal=document.getElementById('noModal');
-const apology=document.getElementById('apology');
-const glass=document.getElementById('glass');
-const heartbeat=document.getElementById('heartbeat');
-const glassSound=document.getElementById('glassSound');
-const happySound=document.getElementById('happySound');
-const questionSound=document.getElementById('questionSound');
+const questionSound = document.getElementById('questionSound');
+const heartbeat = document.getElementById('heartbeat');
+const happySound = document.getElementById('happySound');
 
 questionSound.volume = 0.6;
-questionSound.currentTime = 0;
+heartbeat.volume = 0.8;
+happySound.volume = 1;
 
+let audioUnlocked = false;
 
-let logoutTimer;
-
-/* YES FLOW */
-function showYes(){
-  clearTimeout(logoutTimer);
-  mainUI.classList.add('hidden');
-  noModal.classList.remove('active');
-  document.body.classList.remove('crt','blur');
-  glass.innerHTML='';
-  heartbeat.pause();
-  questionSound.pause();
-  questionSound.currentTime = 0;
-  happySound.currentTime = 0;   // ⬅ ADD THIS
-  happySound.play();
-  transition.classList.add('active');
+// --- helpers ---
+function stopAllAudio(){
+  [questionSound, heartbeat, happySound].forEach(a => {
+    a.pause();
+    a.currentTime = 0;
+  });
 }
-yes.onclick=showYes;
-apology.onclick=showYes;
 
-/* GO BACK */
-back.onclick=()=>{
-  transition.classList.remove('active');
-  mainUI.classList.remove('hidden');
-  happySound.pause();
-  happySound.currentTime = 0;
-  questionSound.currentTime = 0;
-  questionSound.play();
+function playOnly(audioEl){
+  // ensure ONLY this one is audible/playing
+  [questionSound, heartbeat, happySound].forEach(a => {
+    if (a !== audioEl){
+      a.pause();
+      a.currentTime = 0;
+    }
+  });
+  // start requested sound (if unlocked; otherwise it will start right after unlock)
+  audioEl.currentTime = 0;
+  audioEl.play().catch(()=>{});
+}
 
+function startQuestionPageAudio(){
+  // question page => questionSound only
+  playOnly(questionSound);
+}
 
-};
+function unlockAudioOnce(){
+  if (audioUnlocked) return;
+  audioUnlocked = true;
 
-/* NO DODGE */
-document.addEventListener('mousemove',e=>{
-  const r=no.getBoundingClientRect();
-  if(Math.hypot(e.clientX-r.left,e.clientY-r.top)<120){
-    no.style.left=Math.random()*(innerWidth-120)+'px';
-    no.style.top=Math.random()*(innerHeight-60)+'px';
-  }
+  // Prime all audio elements silently (so first real play works immediately)
+  [questionSound, heartbeat, happySound].forEach(a => {
+    try{
+      a.muted = true;
+      const p = a.play();
+      if (p && typeof p.then === 'function'){
+        p.then(() => {
+          a.pause();
+          a.currentTime = 0;
+          a.muted = false;
+        }).catch(()=>{ a.muted = false; });
+      }else{
+        a.pause();
+        a.currentTime = 0;
+        a.muted = false;
+      }
+    }catch(e){}
+  });
+
+  // After the first user gesture, we are allowed to start the CURRENT page audio.
+  // Right now the current page is the question page.
+  startQuestionPageAudio();
+}
+
+// Unlock on first user gesture (click/touch/keydown)
+['pointerdown','touchstart','keydown','click'].forEach(evt => {
+  document.addEventListener(evt, unlockAudioOnce, { once:true, passive:true });
 });
 
-/* NO CLICK */
-no.onclick=e=>{
-  document.body.classList.add('crt');
-  noModal.classList.add('active');
-  heartbeat.currentTime = 0;
-  questionSound.pause();
-  questionSound.currentTime = 0;
-  heartbeat.play();
-  crackFromCenter(e.clientX,e.clientY);
+// --- UI transitions ---
+function showYes(){
+  mainUI.classList.add('hidden');
+  noModal.classList.remove('active');
+  transition.classList.add('active');
 
-  logoutTimer=setTimeout(()=>{
-    fullShatter();
-    glassSound.play();
-    polygonShardFall(innerWidth/2,innerHeight/2);
-    setTimeout(()=>{
-      document.body.classList.add('blur');
-      location.href='/private-site/';
-    },1600);
-  },10000);
+  // yes page => happySound only
+  playOnly(happySound);
+}
+
+yes.onclick = () => {
+  if (!audioUnlocked) unlockAudioOnce();
+  showYes();
 };
 
-// === CRACKS ===
-function crackSeed(x, y) {
-  for (let i = 0; i < 6; i++) { // number of main branches
-    let path = `M ${x} ${y}`;
-    let angle = Math.random() * Math.PI * 2;
-    let cx = x, cy = y;
-    for (let j = 0; j < 8; j++) { // segments per branch
-      angle += (Math.random() - 0.5) * 1; // jaggedness
-      const len = 50 + Math.random() * 50; // variable length per segment
-      cx += Math.cos(angle) * len;
-      cy += Math.sin(angle) * len;
-      path += ` L ${cx} ${cy}`;
-    }
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', path);
-    p.setAttribute('stroke', '#00fff0');       // neon color
-    p.setAttribute('stroke-width', '5');        // thicker line
-    p.setAttribute('fill', 'none');
-    p.style.filter = 'drop-shadow(0 0 25px #00fff0) drop-shadow(0 0 15px #00fff0)'; // strong glow
-    glass.appendChild(p);
-  }
-}
+apology.onclick = () => {
+  if (!audioUnlocked) unlockAudioOnce();
+  showYes();
+};
 
-// Growth function: adds new cracks over time from the center
-function crackGrowth() {
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-  crackSeed(centerX, centerY);
-}
+back.onclick = () => {
+  transition.classList.remove('active');
+  mainUI.classList.remove('hidden');
 
-// Interval for progressive crack growth
-growthInterval = setInterval(crackGrowth, 1000); // every 1 second, faster growth
+  // back to question page => questionSound only
+  if (!audioUnlocked) unlockAudioOnce();
+  startQuestionPageAudio();
+};
 
-/* SHARDS */
-function polygonShardFall(centerX, centerY){
-  const shardCount = 90; // more shards for full screen effect
-  for(let i=0;i<shardCount;i++){
-    const f = document.createElement('div');
-    f.classList.add('fragment');
+no.onclick = () => {
+  if (!audioUnlocked) unlockAudioOnce();
+  noModal.classList.add('active');
 
-    // Random polygon shapes for variety
-    const shapes = [
-      'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
-      'polygon(0 0, 100% 10%, 90% 100%, 10% 90%)',
-      'polygon(0 10%, 100% 0, 90% 100%, 0 90%)',
-      'polygon(10% 0, 100% 0, 90% 100%, 0 90%)'
-    ];
-    f.style.clipPath = shapes[Math.floor(Math.random()*shapes.length)];
+  // no modal => heartbeat only
+  playOnly(heartbeat);
+};
 
-    // Random size
-    const size = 15 + Math.random()*25; // 15-40px
-    f.style.width = size + 'px';
-    f.style.height = size + 'px';
-
-    // Neon color + glow
-    f.style.background = '#00fff0';
-    f.style.boxShadow = '0 0 20px #00fff0, 0 0 40px #00fff0';
-
-    // Start at center
-    f.style.left = centerX + 'px';
-    f.style.top = centerY + 'px';
-
-    // Random direction & distance
-    const dx = (Math.random() - 0.5) * window.innerWidth * (0.8 + Math.random()*0.5);
-    const dy = (Math.random() - 0.5) * window.innerHeight * (0.8 + Math.random()*0.5);
-    const rot = Math.random()*720-360;
-
-    // Animate shards
-    f.animate(
-      [
-        {transform: 'translate(0,0) rotate(0deg)', opacity:1},
-        {transform: `translate(${dx}px,${dy}px) rotate(${rot}deg)`, opacity:0}
-      ],
-      {duration:1400 + Math.random()*400, easing:'cubic-bezier(.22,.61,.36,1)', fill:'forwards'}
-    );
-
-    document.body.appendChild(f);
-
-    // Remove after animation
-    setTimeout(()=>f.remove(),2000);
-  }
-}
-
-
-/* SVG ANIM */
-const style=document.createElement('style');
-style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
-document.head.appendChild(style);
-document.addEventListener('click', () => {
-  if (
-    !transition.classList.contains('active') &&
-    !noModal.classList.contains('active')
-  ) {
-    questionSound.currentTime = 0;
-    questionSound.play();
-  }
-}, { once: true });
-
+// If you ever close the noModal another way in future, call startQuestionPageAudio() there.
 </script>
 
 </body>
