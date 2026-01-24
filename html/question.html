@@ -446,7 +446,6 @@ setOverlayStep(1);
 
 async function unlockAndStartQuestion(){
   // Start question sound on step 1 (your requirement)
-  questionSound.currentTime = 0;
   try{
     await questionSound.play();
   }catch(e){
