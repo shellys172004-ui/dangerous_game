@@ -211,6 +211,8 @@ body.blur{
 
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
 <audio id="glassSound" src="glass.mp3"></audio>
+<audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
+
 
 <script>
 /* SPRINKLES */
@@ -234,6 +236,8 @@ const apology=document.getElementById('apology');
 const glass=document.getElementById('glass');
 const heartbeat=document.getElementById('heartbeat');
 const glassSound=document.getElementById('glassSound');
+const happySound=document.getElementById('happySound');
+
 
 let logoutTimer;
 
@@ -245,6 +249,8 @@ function showYes(){
   document.body.classList.remove('crt','blur');
   glass.innerHTML='';
   heartbeat.pause();
+  happySound.currentTime = 0;   // ⬅ ADD THIS
+  happySound.play();
   transition.classList.add('active');
 }
 yes.onclick=showYes;
@@ -254,6 +260,8 @@ apology.onclick=showYes;
 back.onclick=()=>{
   transition.classList.remove('active');
   mainUI.classList.remove('hidden');
+  happySound.pause();
+
 };
 
 /* NO DODGE */
