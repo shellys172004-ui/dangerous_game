@@ -209,10 +209,9 @@ body.blur{
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* ===================== NEW: BUTTON/OVERLAY AURA BARS ===================== */
-/* Wrapper guarantees bars render OUTSIDE without getting clipped */
+/* ===================== AURA BARS (FIXED GEOMETRY) ===================== */
 .btnWrap{
-  position:relative;
+  position:relative;          /* ✅ FIX: anchor absolute NO inside wrap */
   display:inline-block;
   overflow:visible;
 }
@@ -221,13 +220,19 @@ body.blur{
   z-index:2;
 }
 
-/* Aura container (bars radiate outward) */
+/* ✅ FIX: overlay wrapper so aura shows */
+.overlayWrap{
+  position:relative;
+  display:inline-block;
+  overflow:visible;
+}
+
 .aura{
   position:absolute;
-  inset:-26px;
+  inset:-6px;                 /* ✅ FIX: emerge from button, not far away */
   pointer-events:none;
   opacity:0;
-  transition:opacity .12s linear;
+  transition:opacity .10s linear;
   z-index:1;
 }
 .aura.on{ opacity:1; }
@@ -235,50 +240,49 @@ body.blur{
 .aura .side{
   position:absolute;
   display:flex;
-  gap:2px;
   opacity:.95;
 }
 
+/* ✅ FIX: no inner padding offsets; sides align consistently */
 .aura .top{
-  left:16px; right:16px; top:0;
-  height:22px;
+  left:0; right:0; top:0;
+  height:0;
   align-items:flex-end;
   justify-content:space-between;
 }
 .aura .bottom{
-  left:16px; right:16px; bottom:0;
-  height:22px;
+  left:0; right:0; bottom:0;
+  height:0;
   align-items:flex-start;
   justify-content:space-between;
 }
 .aura .left{
-  top:16px; bottom:16px; left:0;
-  width:22px;
+  top:0; bottom:0; left:0;
+  width:0;
   flex-direction:column;
   align-items:flex-end;
   justify-content:space-between;
 }
 .aura .right{
-  top:16px; bottom:16px; right:0;
-  width:22px;
+  top:0; bottom:0; right:0;
+  width:0;
   flex-direction:column;
   align-items:flex-start;
   justify-content:space-between;
 }
 
-/* bars: ultra-thin cyan like reference */
 .aura .vbar{
   width:1px;
   height:2px;
   background:#00fff0;
-  box-shadow:0 0 8px rgba(0,255,240,.85);
+  box-shadow:0 0 10px rgba(0,255,240,.9);
   border-radius:1px;
 }
 .aura .hbar{
   height:1px;
   width:2px;
   background:#00fff0;
-  box-shadow:0 0 8px rgba(0,255,240,.85);
+  box-shadow:0 0 10px rgba(0,255,240,.9);
   border-radius:1px;
 }
 /* ======================================================================= */
@@ -294,18 +298,15 @@ body.blur{
 <div class="ui" id="mainUI">
   <h2 id="question">Will you be my valentine?</h2>
 
-  <!-- YES wrapped (only for aura positioning) -->
   <div class="btnWrap" id="yesWrap">
     <button id="yes">YES</button>
   </div>
 
-  <!-- NO wrapped (only for aura positioning) -->
   <div class="btnWrap" id="noWrap">
     <button id="no">NO</button>
   </div>
 </div>
 
-<!-- YES TRANSITION (RESTORED) -->
 <div class="transition" id="transition">
   <h1>"yAyAyAyAyAY" 🎮🔥</h1>
   <p>You made the wise choice 😌💙</p>
@@ -318,7 +319,9 @@ body.blur{
 </div>
 
 <div class="tapOverlay step1" id="tapOverlay">
-  <span id="tapOverlayText">Click if you really want to enter.</span>
+  <div class="overlayWrap" id="overlayWrap">
+    <span id="tapOverlayText">Click if you really want to enter.</span>
+  </div>
 </div>
 
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
@@ -358,6 +361,7 @@ const questionSound=document.getElementById('questionSound');
 const questionEl=document.getElementById('question');
 const tapOverlay=document.getElementById('tapOverlay');
 const tapOverlayText=document.getElementById('tapOverlayText');
+const overlayWrap=document.getElementById('overlayWrap');
 
 questionSound.volume = 0.6;
 
@@ -402,55 +406,44 @@ function setActiveAudio(el){
 }
 /* ========================================================== */
 
-/* ===================== NEW: AURA BUILDER ===================== */
-function makeAura(target, topCount=72, sideCount=26){
+/* ===================== AURA BUILDER ===================== */
+function makeAura(target, topCount=76, sideCount=28){
   const aura=document.createElement('div');
   aura.className='aura';
 
-  const top=document.createElement('div');
-  top.className='side top';
-  const bottom=document.createElement('div');
-  bottom.className='side bottom';
-  const left=document.createElement('div');
-  left.className='side left';
-  const right=document.createElement('div');
-  right.className='side right';
+  const top=document.createElement('div'); top.className='side top';
+  const bottom=document.createElement('div'); bottom.className='side bottom';
+  const left=document.createElement('div'); left.className='side left';
+  const right=document.createElement('div'); right.className='side right';
 
-  // Create bars with a fixed "shape weight" so it looks like a continuous aura
-  // (no randomness; just a gentle curve along each side)
   const topBars=[], bottomBars=[], leftBars=[], rightBars=[];
   for(let i=0;i<topCount;i++){
     const b=document.createElement('span');
     b.className='vbar';
-    // weight peaks near center, lower near ends
     const t = i/(topCount-1);
-    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
-    top.appendChild(b);
-    topBars.push(b);
+    b.dataset.w = (0.35 + 0.65*Math.sin(Math.PI*t)).toFixed(3);
+    top.appendChild(b); topBars.push(b);
   }
   for(let i=0;i<topCount;i++){
     const b=document.createElement('span');
     b.className='vbar';
     const t = i/(topCount-1);
-    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
-    bottom.appendChild(b);
-    bottomBars.push(b);
+    b.dataset.w = (0.35 + 0.65*Math.sin(Math.PI*t)).toFixed(3);
+    bottom.appendChild(b); bottomBars.push(b);
   }
   for(let i=0;i<sideCount;i++){
     const b=document.createElement('span');
     b.className='hbar';
     const t = i/(sideCount-1);
-    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
-    left.appendChild(b);
-    leftBars.push(b);
+    b.dataset.w = (0.35 + 0.65*Math.sin(Math.PI*t)).toFixed(3);
+    left.appendChild(b); leftBars.push(b);
   }
   for(let i=0;i<sideCount;i++){
     const b=document.createElement('span');
     b.className='hbar';
     const t = i/(sideCount-1);
-    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
-    right.appendChild(b);
-    rightBars.push(b);
+    b.dataset.w = (0.35 + 0.65*Math.sin(Math.PI*t)).toFixed(3);
+    right.appendChild(b); rightBars.push(b);
   }
 
   aura.appendChild(top);
@@ -462,13 +455,12 @@ function makeAura(target, topCount=72, sideCount=26){
   return { aura, topBars, bottomBars, leftBars, rightBars };
 }
 
-// Auras: use WRAPS for buttons (guaranteed visibility), use span for overlay
-const yesAura = makeAura(yesWrap, 76, 28);
-const noAura  = makeAura(noWrap,  76, 28);
-const ovAura  = makeAura(tapOverlayText, 76, 28);
+const yesAura = makeAura(yesWrap);
+const noAura  = makeAura(noWrap);
+const ovAura  = makeAura(overlayWrap);
 /* ========================================================== */
 
-/* ===================== VISUAL LOOP (LIKE YOUR GLOW) ===================== */
+/* ===================== VISUAL LOOP (EXAGGERATED + SLOWER FALL) ===================== */
 let visRAF = null;
 let smoothLevel = 0;
 
@@ -478,34 +470,30 @@ function setAuraOn(a, on){
 }
 
 function applyAura(a, level){
-  // level is 0..1, already smoothed, already curved
-  const maxV = 44;   // px for top/bottom
-  const maxH = 44;   // px for left/right
+  const maxV = 70;  /* ✅ more exaggeration */
+  const maxH = 70;
 
   for(const b of a.topBars){
     const w = parseFloat(b.dataset.w);
-    b.style.height = (2 + level * w * maxV) + 'px';   // up
+    b.style.height = (2 + level * w * maxV) + 'px';
   }
   for(const b of a.bottomBars){
     const w = parseFloat(b.dataset.w);
-    b.style.height = (2 + level * w * maxV) + 'px';   // down (visual direction is via positioning)
+    b.style.height = (2 + level * w * maxV) + 'px';
   }
   for(const b of a.leftBars){
     const w = parseFloat(b.dataset.w);
-    b.style.width = (2 + level * w * maxH) + 'px';    // left
+    b.style.width = (2 + level * w * maxH) + 'px';
   }
   for(const b of a.rightBars){
     const w = parseFloat(b.dataset.w);
-    b.style.width = (2 + level * w * maxH) + 'px';    // right
+    b.style.width = (2 + level * w * maxH) + 'px';
   }
 }
 
 function getMusicLevel(){
-  // Similar “feel” to your glow:
-  // take a mid-band average, square it, then smooth
   analyser.getByteFrequencyData(dataArr);
 
-  // mid-ish band: avoids rumble + avoids hiss
   const start = 18;
   const end = Math.min(dataArr.length-1, 220);
 
@@ -515,8 +503,8 @@ function getMusicLevel(){
     sum += dataArr[i];
     n++;
   }
-  let v = (sum / n) / 255;  // 0..1
-  v = v * v;                // curve like your glow
+  let v = (sum / n) / 255;
+  v = v * v;  // same as glow feel
   return v;
 }
 
@@ -527,7 +515,7 @@ function visualLoop(){
     setAuraOn(yesAura,false);
     setAuraOn(noAura,false);
     setAuraOn(ovAura,false);
-    smoothLevel *= 0.85; // decay
+    smoothLevel *= 0.92;
     applyAura(yesAura, 0);
     applyAura(noAura, 0);
     applyAura(ovAura, 0);
@@ -536,25 +524,30 @@ function visualLoop(){
   }
 
   const raw = getMusicLevel();
-  // smoothing (this is the “musical” part)
-  smoothLevel = smoothLevel * 0.82 + raw * 0.18;
 
-  // show auras only when it’s not basically silent
-  const on = smoothLevel > 0.015;
+  /* ✅ FIX: fast attack + slow decay (more musical + exaggerated) */
+  if(raw > smoothLevel){
+    smoothLevel += (raw - smoothLevel) * 0.35;  // fast attack
+  }else{
+    smoothLevel *= 0.94;                        // slower fall
+  }
+
+  const shaped = Math.min(1, Math.pow(smoothLevel, 0.75)); // exaggerate peaks
+
+  const on = shaped > 0.012;
   setAuraOn(yesAura, on);
   setAuraOn(noAura, on);
   setAuraOn(ovAura, on);
 
-  // bias per scene, but still same musical curve
-  const yesGain = (currentAudioEl === happySound) ? 1.20 : 1.00;
-  const noGain  = (currentAudioEl === heartbeat) ? 1.30 : 0.95;
+  const yesGain = (currentAudioEl === happySound) ? 1.22 : 1.00;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.30 : 1.00;
 
-  applyAura(yesAura, Math.min(1, smoothLevel * yesGain));
-  applyAura(noAura,  Math.min(1, smoothLevel * noGain));
-  applyAura(ovAura,  Math.min(1, smoothLevel * 1.00));
+  applyAura(yesAura, Math.min(1, shaped * yesGain));
+  applyAura(noAura,  Math.min(1, shaped * noGain));
+  applyAura(ovAura,  shaped);
 
-  // keep your “perfect” question glow in sync
-  const qGlow = Math.round(25 + smoothLevel * 95);
+  /* keep your question glow in sync */
+  const qGlow = Math.round(25 + shaped * 95);
   questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
 
   visRAF = requestAnimationFrame(visualLoop);
@@ -589,7 +582,7 @@ back.onclick=()=>{
   questionSound.play().catch(()=>{});
 };
 
-/* NO DODGE */
+/* NO DODGE (keeps your existing logic) */
 document.addEventListener('mousemove',e=>{
   const r=no.getBoundingClientRect();
   if(Math.hypot(e.clientX-r.left,e.clientY-r.top)<120){
@@ -620,7 +613,7 @@ no.onclick=e=>{
   },10000);
 };
 
-// === CRACKS ===
+/* ====== CRACKS / SHARDS: left as-is (your functions) ====== */
 function crackSeed(x, y) {
   for (let i = 0; i < 6; i++) {
     let path = `M ${x} ${y}`;
@@ -649,13 +642,11 @@ function crackGrowth() {
 }
 growthInterval = setInterval(crackGrowth, 1000);
 
-/* SHARDS */
 function polygonShardFall(centerX, centerY){
   const shardCount = 90;
   for(let i=0;i<shardCount;i++){
     const f = document.createElement('div');
     f.classList.add('fragment');
-
     const shapes = [
       'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
       'polygon(0 0, 100% 10%, 90% 100%, 10% 90%)',
@@ -663,21 +654,16 @@ function polygonShardFall(centerX, centerY){
       'polygon(10% 0, 100% 0, 90% 100%, 0 90%)'
     ];
     f.style.clipPath = shapes[Math.floor(Math.random()*shapes.length)];
-
     const size = 15 + Math.random()*25;
     f.style.width = size + 'px';
     f.style.height = size + 'px';
-
     f.style.background = '#00fff0';
     f.style.boxShadow = '0 0 20px #00fff0, 0 0 40px #00fff0';
-
     f.style.left = centerX + 'px';
     f.style.top = centerY + 'px';
-
     const dx = (Math.random() - 0.5) * window.innerWidth * (0.8 + Math.random()*0.5);
     const dy = (Math.random() - 0.5) * window.innerHeight * (0.8 + Math.random()*0.5);
     const rot = Math.random()*720-360;
-
     f.animate(
       [
         {transform: 'translate(0,0) rotate(0deg)', opacity:1},
@@ -685,7 +671,6 @@ function polygonShardFall(centerX, centerY){
       ],
       {duration:1400 + Math.random()*400, easing:'cubic-bezier(.22,.61,.36,1)', fill:'forwards'}
     );
-
     document.body.appendChild(f);
     setTimeout(()=>f.remove(),2000);
   }
@@ -696,9 +681,7 @@ const style=document.createElement('style');
 style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
 document.head.appendChild(style);
 
-/* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
-
-// Block YES/NO until audio is unlocked
+/* ---------- TAP TO START AUDIO ---------- */
 yes.style.pointerEvents = 'none';
 no.style.pointerEvents = 'none';
 
@@ -714,10 +697,8 @@ function setOverlayStep(step){
   if(step===2) tapOverlayText.textContent = "You can still turn back.";
   if(step===3) tapOverlayText.textContent = "Enter at your own risk.";
 }
-
 setOverlayStep(1);
 
-// Prime other sounds so first YES/NO click has zero lag
 function primeAudio(a){
   const prevMuted = a.muted;
   a.muted = true;
@@ -727,9 +708,7 @@ function primeAudio(a){
       a.pause();
       try{ a.currentTime = 0; }catch(e){}
       a.muted = prevMuted;
-    }).catch(()=>{
-      a.muted = prevMuted;
-    });
+    }).catch(()=>{ a.muted = prevMuted; });
   }else{
     a.pause();
     try{ a.currentTime = 0; }catch(e){}
@@ -741,18 +720,15 @@ async function unlockAndStartQuestion(){
   ensureAudioVisuals();
   try{ await audioCtx.resume(); }catch(e){}
 
-  // start visual loop once
   if(!visRAF) visualLoop();
 
-  // Start question sound (first overlay click)
   try{
     setActiveAudio(questionSound);
     await questionSound.play();
   }catch(e){
-    return; // stay on overlay if blocked
+    return;
   }
 
-  // prime other sounds once for zero-lag first click
   if(!audioPrimed){
     audioPrimed = true;
     primeAudio(happySound);
@@ -760,13 +736,11 @@ async function unlockAndStartQuestion(){
     primeAudio(glassSound);
   }
 
-  // advance overlays (must click each overlay)
   if(overlayStep < 3){
     setOverlayStep(overlayStep + 1);
     return;
   }
 
-  // step 3 -> enter
   tapOverlay.classList.add('hidden');
   yes.style.pointerEvents = '';
   no.style.pointerEvents = '';
