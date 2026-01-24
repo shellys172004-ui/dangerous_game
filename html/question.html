@@ -16,156 +16,17 @@ body{
   background:radial-gradient(circle at top,#0e1a2f,#05070c);
   color:#00fff0;
 }
-
-/* BACKGROUND GRID */
-.background{
-  position:fixed;inset:0;
-  background:
-    repeating-linear-gradient(0deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px),
-    repeating-linear-gradient(90deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px);
-  animation:grid 12s linear infinite;
-  z-index:0;
-}
-@keyframes grid{to{background-position:0 36px,36px 0}}
-
-/* SPRINKLES */
-.sprinkles{position:fixed;inset:0;pointer-events:none;z-index:1}
-.sprinkle{
-  position:absolute;
-  width:4px;height:4px;
-  background:#00fff0;
-  box-shadow:0 0 12px #00fff0,0 0 30px #00fff0;
-  animation:float 6s linear infinite;
-}
-@keyframes float{
-  from{transform:translateY(100vh);opacity:0}
-  to{transform:translateY(-10vh);opacity:1}
-}
-
-/* UI */
-.ui{
-  position:relative;
-  z-index:3;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-}
+.ui{height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center}
 .ui.hidden{display:none}
-
-h2{
-  font-size:2.3rem;
-  text-shadow:0 0 25px #00fff0;
-  margin-bottom:20px;
-  animation:floatQ 3s ease-in-out infinite;
-}
-@keyframes floatQ{50%{transform:translateY(-10px)}}
-
-button{
-  padding:14px 40px;
-  margin:12px;
-  font-family:'Orbitron';
-  font-size:1rem;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-}
-
-/* YES */
-#yes{
-  background:linear-gradient(135deg,#00fff0,#00b3ff);
-  color:#000;
-  box-shadow:0 0 40px #00fff0;
-}
-
-/* NO */
-#no{
-  position:absolute;
-  background:#ff004c;
-  color:#fff;
-  box-shadow:0 0 35px #ff004c;
-}
-
-/* TRANSITION */
-.transition{
-  position:fixed;inset:0;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  opacity:0;
-  pointer-events:none;
-  z-index:6;
-  transition:opacity .6s ease;
-}
+button{padding:14px 40px;margin:12px;font-family:'Orbitron'}
+.transition{position:fixed;inset:0;display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none}
 .transition.active{opacity:1;pointer-events:auto}
-
-.transition h1{
-  font-size:2.2rem;
-  text-shadow:0 0 30px #00fff0;
-  animation:glitch .25s infinite;
-}
-@keyframes glitch{
-  25%{transform:translate(-2px,2px)}
-  50%{transform:translate(2px,-2px)}
-}
-
-.transition button{
-  margin-top:30px;
-  background:transparent;
-  color:#00fff0;
-  border:1px solid #00fff0;
-  box-shadow:0 0 25px #00fff0;
-}
-
-/* CRT */
-body.crt::before{
-  content:'';
-  position:fixed;inset:0;
-  background:repeating-linear-gradient(
-    to bottom,
-    rgba(0,0,0,.25) 0,
-    rgba(0,0,0,.25) 1px,
-    transparent 2px
-  );
-  pointer-events:none;
-  z-index:20;
-}
-body.crt{animation:jitter .15s infinite}
-@keyframes jitter{50%{transform:translate(1px,-1px)}}
-
-/* GLASS */
-#glass{position:fixed;inset:0;pointer-events:none;z-index:4}
-
-/* NO MODAL */
-.noModal{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.85);
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  opacity:0;
-  pointer-events:none;
-  z-index:7;
-}
+.noModal{position:fixed;inset:0;background:#000c;display:flex;justify-content:center;align-items:center;opacity:0;pointer-events:none}
 .noModal.active{opacity:1;pointer-events:auto}
-
-.noModal button{
-  background:transparent;
-  color:#00fff0;
-  border:1px solid #00fff0;
-  box-shadow:0 0 30px #00fff0;
-}
 </style>
 </head>
 
 <body>
-
-<div class="background"></div>
-<div class="sprinkles" id="sprinkles"></div>
-<svg id="glass"></svg>
 
 <div class="ui" id="mainUI">
   <h2>Will you be my valentine?</h2>
@@ -174,13 +35,10 @@ body.crt{animation:jitter .15s infinite}
 </div>
 
 <div class="transition" id="transition">
-  <h1>"yAyAyAyAyAY" 🎮🔥</h1>
-  <p>You made the wise choice 😌💙</p>
   <button id="back">GO BACK</button>
 </div>
 
 <div class="noModal" id="noModal">
-  <h2>I know that wasn’t intentional.</h2>
   <button id="apology">I meant YES</button>
 </div>
 
@@ -189,57 +47,51 @@ body.crt{animation:jitter .15s infinite}
 <audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
 
 <script>
-/* SPRINKLES */
-const sprinkles=document.getElementById('sprinkles');
-for(let i=0;i<50;i++){
-  const s=document.createElement('div');
-  s.className='sprinkle';
-  s.style.left=Math.random()*100+'%';
-  s.style.animationDelay=Math.random()*6+'s';
-  sprinkles.appendChild(s);
-}
+const yes = document.getElementById('yes');
+const no = document.getElementById('no');
+const back = document.getElementById('back');
+const apology = document.getElementById('apology');
+const mainUI = document.getElementById('mainUI');
+const transition = document.getElementById('transition');
+const noModal = document.getElementById('noModal');
 
-/* ELEMENTS */
-const yes=document.getElementById('yes');
-const no=document.getElementById('no');
-const back=document.getElementById('back');
-const apology=document.getElementById('apology');
-const mainUI=document.getElementById('mainUI');
-const transition=document.getElementById('transition');
-const noModal=document.getElementById('noModal');
-const glass=document.getElementById('glass');
+const questionSound = document.getElementById('questionSound');
+const heartbeat = document.getElementById('heartbeat');
+const happySound = document.getElementById('happySound');
 
-const questionSound=document.getElementById('questionSound');
-const heartbeat=document.getElementById('heartbeat');
-const happySound=document.getElementById('happySound');
-
-/* AUDIO SETTINGS */
 questionSound.volume = 0.6;
 heartbeat.volume = 0.8;
+happySound.volume = 1;
 
-/* 🔑 SINGLE USER GESTURE AUDIO START */
+// 🔓 ONE-TIME AUDIO UNLOCK (THIS IS THE IMPORTANT PART)
 document.addEventListener('click', () => {
-  questionSound.currentTime = 0;
+  [questionSound, heartbeat, happySound].forEach(a => {
+    a.muted = true;
+    a.play().then(() => {
+      a.pause();
+      a.currentTime = 0;
+      a.muted = false;
+    }).catch(()=>{});
+  });
+
+  // start background question sound
   questionSound.play().catch(()=>{});
-  heartbeat.load();
-  happySound.load();
 }, { once:true });
 
-/* YES */
 function showYes(){
   mainUI.classList.add('hidden');
   noModal.classList.remove('active');
-  heartbeat.pause();
   questionSound.pause();
+  heartbeat.pause();
   happySound.currentTime = 0;
   happySound.play();
   transition.classList.add('active');
 }
-yes.onclick=showYes;
-apology.onclick=showYes;
 
-/* BACK */
-back.onclick=()=>{
+yes.onclick = showYes;
+apology.onclick = showYes;
+
+back.onclick = () => {
   transition.classList.remove('active');
   mainUI.classList.remove('hidden');
   happySound.pause();
@@ -247,9 +99,7 @@ back.onclick=()=>{
   questionSound.play();
 };
 
-/* NO */
-no.onclick=e=>{
-  document.body.classList.add('crt');
+no.onclick = () => {
   noModal.classList.add('active');
   questionSound.pause();
   heartbeat.currentTime = 0;
