@@ -70,8 +70,6 @@ button{
   border-radius:6px;
   border:none;
   cursor:pointer;
-  position:relative;
-  overflow:hidden; /* IMPORTANT: bars are INSIDE */
 }
 
 /* YES */
@@ -168,13 +166,23 @@ body.crt{animation:jitter .15s infinite}
   box-shadow:0 0 30px #00fff0;
 }
 
+/* SHARDS */
+.shard{
+  position:fixed;
+  width:30px;height:30px;
+  background:#00fff0;
+  clip-path:polygon(50% 0%,100% 30%,80% 100%,20% 100%,0% 30%);
+  box-shadow:0 0 20px #00fff0,0 0 40px rgba(0,255,240,.9);
+  pointer-events:none;
+  z-index:8;
+}
+
 /* BLUR */
 body.blur{
   filter:blur(6px) brightness(.85);
   transition:filter .6s ease;
 }
 
-/* OVERLAY */
 .tapOverlay{
   position:fixed;
   inset:0;
@@ -182,7 +190,7 @@ body.blur{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:#000;
+  background:#000;          /* FULL BLACK */
   cursor:pointer;
 }
 .tapOverlay.hidden{display:none}
@@ -194,47 +202,86 @@ body.blur{
   text-shadow:0 0 18px #00fff0;
   color:#00fff0;
   position:relative;
-  overflow:hidden; /* IMPORTANT: bars inside overlay */
 }
 
-/* --- 3-step overlay scaling --- */
+/* --- 3-step overlay scaling (same style, bigger each time) --- */
 .tapOverlay.step1 span{ font-size:1.05rem; transform:scale(1); }
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* ===================== INSIDE BARS (like glow logic) ===================== */
-.innerBars{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  padding:6px 8px;
-  pointer-events:none;
-  opacity:.0;                 /* off when silent */
-  transition:opacity .15s linear;
-  z-index:0;
+/* ===================== NEW: BUTTON/OVERLAY AURA BARS ===================== */
+/* Wrapper guarantees bars render OUTSIDE without getting clipped */
+.btnWrap{
+  position:relative;
+  display:inline-block;
+  overflow:visible;
 }
-
-.innerBars.on{ opacity:.9; }
-
-.innerBars span{
-  width:2px;                  /* thin like your reference */
-  height:2px;
-  background:#00fff0;         /* cyan everywhere */
-  box-shadow:0 0 10px rgba(0,255,240,.85);
-  border-radius:2px;
-  transform-origin:bottom;
-}
-
-/* keep text above bars */
-button .label, .tapOverlay span .label{
+.btnWrap > button{
   position:relative;
   z-index:2;
 }
-.tapOverlay span .label{ display:inline-block; }
-/* ======================================================================= */
 
+/* Aura container (bars radiate outward) */
+.aura{
+  position:absolute;
+  inset:-26px;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .12s linear;
+  z-index:1;
+}
+.aura.on{ opacity:1; }
+
+.aura .side{
+  position:absolute;
+  display:flex;
+  gap:2px;
+  opacity:.95;
+}
+
+.aura .top{
+  left:16px; right:16px; top:0;
+  height:22px;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.aura .bottom{
+  left:16px; right:16px; bottom:0;
+  height:22px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.aura .left{
+  top:16px; bottom:16px; left:0;
+  width:22px;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.aura .right{
+  top:16px; bottom:16px; right:0;
+  width:22px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+
+/* bars: ultra-thin cyan like reference */
+.aura .vbar{
+  width:1px;
+  height:2px;
+  background:#00fff0;
+  box-shadow:0 0 8px rgba(0,255,240,.85);
+  border-radius:1px;
+}
+.aura .hbar{
+  height:1px;
+  width:2px;
+  background:#00fff0;
+  box-shadow:0 0 8px rgba(0,255,240,.85);
+  border-radius:1px;
+}
+/* ======================================================================= */
 </style>
 </head>
 
@@ -247,17 +294,18 @@ button .label, .tapOverlay span .label{
 <div class="ui" id="mainUI">
   <h2 id="question">Will you be my valentine?</h2>
 
-  <button id="yes">
-    <div class="innerBars" data-bars="yes"></div>
-    <span class="label">YES</span>
-  </button>
+  <!-- YES wrapped (only for aura positioning) -->
+  <div class="btnWrap" id="yesWrap">
+    <button id="yes">YES</button>
+  </div>
 
-  <button id="no">
-    <div class="innerBars" data-bars="no"></div>
-    <span class="label">NO</span>
-  </button>
+  <!-- NO wrapped (only for aura positioning) -->
+  <div class="btnWrap" id="noWrap">
+    <button id="no">NO</button>
+  </div>
 </div>
 
+<!-- YES TRANSITION (RESTORED) -->
 <div class="transition" id="transition">
   <h1>"yAyAyAyAyAY" 🎮🔥</h1>
   <p>You made the wise choice 😌💙</p>
@@ -270,10 +318,7 @@ button .label, .tapOverlay span .label{
 </div>
 
 <div class="tapOverlay step1" id="tapOverlay">
-  <span id="tapOverlayText">
-    <div class="innerBars" data-bars="overlay"></div>
-    <span class="label">Click if you really want to enter.</span>
-  </span>
+  <span id="tapOverlayText">Click if you really want to enter.</span>
 </div>
 
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
@@ -295,16 +340,21 @@ for(let i=0;i<50;i++){
 /* ELEMENTS */
 const yes=document.getElementById('yes');
 const no=document.getElementById('no');
+const yesWrap=document.getElementById('yesWrap');
+const noWrap=document.getElementById('noWrap');
+
 const mainUI=document.getElementById('mainUI');
 const transition=document.getElementById('transition');
 const back=document.getElementById('back');
 const noModal=document.getElementById('noModal');
 const apology=document.getElementById('apology');
 const glass=document.getElementById('glass');
+
 const heartbeat=document.getElementById('heartbeat');
 const glassSound=document.getElementById('glassSound');
 const happySound=document.getElementById('happySound');
 const questionSound=document.getElementById('questionSound');
+
 const questionEl=document.getElementById('question');
 const tapOverlay=document.getElementById('tapOverlay');
 const tapOverlayText=document.getElementById('tapOverlayText');
@@ -324,7 +374,7 @@ function ensureAudioVisuals(){
   if(audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 1024;
+  analyser.fftSize = 2048;
   dataArr = new Uint8Array(analyser.frequencyBinCount);
   analyser.connect(audioCtx.destination);
 }
@@ -352,93 +402,162 @@ function setActiveAudio(el){
 }
 /* ========================================================== */
 
-/* ===================== BUILD BARS (INSIDE) ===================== */
-function fillBars(container, count){
-  container.innerHTML = '';
-  for(let i=0;i<count;i++){
+/* ===================== NEW: AURA BUILDER ===================== */
+function makeAura(target, topCount=72, sideCount=26){
+  const aura=document.createElement('div');
+  aura.className='aura';
+
+  const top=document.createElement('div');
+  top.className='side top';
+  const bottom=document.createElement('div');
+  bottom.className='side bottom';
+  const left=document.createElement('div');
+  left.className='side left';
+  const right=document.createElement('div');
+  right.className='side right';
+
+  // Create bars with a fixed "shape weight" so it looks like a continuous aura
+  // (no randomness; just a gentle curve along each side)
+  const topBars=[], bottomBars=[], leftBars=[], rightBars=[];
+  for(let i=0;i<topCount;i++){
     const b=document.createElement('span');
-    container.appendChild(b);
+    b.className='vbar';
+    // weight peaks near center, lower near ends
+    const t = i/(topCount-1);
+    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
+    top.appendChild(b);
+    topBars.push(b);
   }
-  return [...container.querySelectorAll('span')];
+  for(let i=0;i<topCount;i++){
+    const b=document.createElement('span');
+    b.className='vbar';
+    const t = i/(topCount-1);
+    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
+    bottom.appendChild(b);
+    bottomBars.push(b);
+  }
+  for(let i=0;i<sideCount;i++){
+    const b=document.createElement('span');
+    b.className='hbar';
+    const t = i/(sideCount-1);
+    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
+    left.appendChild(b);
+    leftBars.push(b);
+  }
+  for(let i=0;i<sideCount;i++){
+    const b=document.createElement('span');
+    b.className='hbar';
+    const t = i/(sideCount-1);
+    b.dataset.w = (0.45 + 0.55*Math.sin(Math.PI*t)).toFixed(3);
+    right.appendChild(b);
+    rightBars.push(b);
+  }
+
+  aura.appendChild(top);
+  aura.appendChild(bottom);
+  aura.appendChild(left);
+  aura.appendChild(right);
+  target.appendChild(aura);
+
+  return { aura, topBars, bottomBars, leftBars, rightBars };
 }
 
-const yesBarWrap = yes.querySelector('.innerBars');
-const noBarWrap = no.querySelector('.innerBars');
-const ovBarWrap = tapOverlayText.querySelector('.innerBars');
+// Auras: use WRAPS for buttons (guaranteed visibility), use span for overlay
+const yesAura = makeAura(yesWrap, 76, 28);
+const noAura  = makeAura(noWrap,  76, 28);
+const ovAura  = makeAura(tapOverlayText, 76, 28);
+/* ========================================================== */
 
-const YES_BARS = fillBars(yesBarWrap, 36);
-const NO_BARS  = fillBars(noBarWrap, 36);
-const OV_BARS  = fillBars(ovBarWrap, 40);
+/* ===================== VISUAL LOOP (LIKE YOUR GLOW) ===================== */
+let visRAF = null;
+let smoothLevel = 0;
 
-/* Use the same "loudness-style" logic as the question glow:
-   - Pick a mid frequency bin (feels musical)
-   - Use squared amplitude for smoothness
-   - Apply smoothing so it pulses nicely
-*/
-let smooth = 0;
-
-function setBarsOn(wrap, on){
-  if(on) wrap.classList.add('on');
-  else wrap.classList.remove('on');
+function setAuraOn(a, on){
+  if(on) a.aura.classList.add('on');
+  else a.aura.classList.remove('on');
 }
 
-function animateBarSet(bars, strength){
-  // strength: 0..1 (already smooth & musical)
-  const base = 2;
-  const maxH = 26;
-  const n = bars.length;
+function applyAura(a, level){
+  // level is 0..1, already smoothed, already curved
+  const maxV = 44;   // px for top/bottom
+  const maxH = 44;   // px for left/right
 
-  for(let i=0;i<n;i++){
-    // A clean “equalizer” distribution:
-    // center a bit taller, edges a bit shorter (like the ref image)
-    const t = i/(n-1);
-    const curve = 0.65 + 0.35*Math.sin(t*Math.PI); // 0.65..1.0..0.65
-    const h = base + (strength*strength) * maxH * curve;
-    bars[i].style.height = Math.max(2, h) + 'px';
+  for(const b of a.topBars){
+    const w = parseFloat(b.dataset.w);
+    b.style.height = (2 + level * w * maxV) + 'px';   // up
   }
+  for(const b of a.bottomBars){
+    const w = parseFloat(b.dataset.w);
+    b.style.height = (2 + level * w * maxV) + 'px';   // down (visual direction is via positioning)
+  }
+  for(const b of a.leftBars){
+    const w = parseFloat(b.dataset.w);
+    b.style.width = (2 + level * w * maxH) + 'px';    // left
+  }
+  for(const b of a.rightBars){
+    const w = parseFloat(b.dataset.w);
+    b.style.width = (2 + level * w * maxH) + 'px';    // right
+  }
+}
+
+function getMusicLevel(){
+  // Similar “feel” to your glow:
+  // take a mid-band average, square it, then smooth
+  analyser.getByteFrequencyData(dataArr);
+
+  // mid-ish band: avoids rumble + avoids hiss
+  const start = 18;
+  const end = Math.min(dataArr.length-1, 220);
+
+  let sum = 0;
+  let n = 0;
+  for(let i=start;i<=end;i++){
+    sum += dataArr[i];
+    n++;
+  }
+  let v = (sum / n) / 255;  // 0..1
+  v = v * v;                // curve like your glow
+  return v;
 }
 
 function visualLoop(){
   const playing = analyser && currentAudioEl && !currentAudioEl.paused;
 
   if(!playing){
-    smooth *= 0.90;
-    setBarsOn(yesBarWrap,false);
-    setBarsOn(noBarWrap,false);
-    setBarsOn(ovBarWrap,false);
-    requestAnimationFrame(visualLoop);
+    setAuraOn(yesAura,false);
+    setAuraOn(noAura,false);
+    setAuraOn(ovAura,false);
+    smoothLevel *= 0.85; // decay
+    applyAura(yesAura, 0);
+    applyAura(noAura, 0);
+    applyAura(ovAura, 0);
+    visRAF = requestAnimationFrame(visualLoop);
     return;
   }
 
-  analyser.getByteFrequencyData(dataArr);
+  const raw = getMusicLevel();
+  // smoothing (this is the “musical” part)
+  smoothLevel = smoothLevel * 0.82 + raw * 0.18;
 
-  // Use a mid bin like your question glow does
-  const midBin = Math.min(110, dataArr.length-1);
-  const v = dataArr[midBin]/255;
+  // show auras only when it’s not basically silent
+  const on = smoothLevel > 0.015;
+  setAuraOn(yesAura, on);
+  setAuraOn(noAura, on);
+  setAuraOn(ovAura, on);
 
-  // smooth loudness
-  const target = v*v;
-  smooth = smooth*0.82 + target*0.18;
+  // bias per scene, but still same musical curve
+  const yesGain = (currentAudioEl === happySound) ? 1.20 : 1.00;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.30 : 0.95;
 
-  // show bars only when actually audible
-  const on = smooth > 0.01;
-  setBarsOn(yesBarWrap,on);
-  setBarsOn(noBarWrap,on);
-  setBarsOn(ovBarWrap,on);
+  applyAura(yesAura, Math.min(1, smoothLevel * yesGain));
+  applyAura(noAura,  Math.min(1, smoothLevel * noGain));
+  applyAura(ovAura,  Math.min(1, smoothLevel * 1.00));
 
-  // bias per scene but still same musical feel
-  const yesGain = (currentAudioEl === happySound) ? 1.15 : 1.0;
-  const noGain  = (currentAudioEl === heartbeat) ? 1.25 : 0.95;
-
-  animateBarSet(YES_BARS, smooth*yesGain);
-  animateBarSet(NO_BARS,  smooth*noGain);
-  animateBarSet(OV_BARS,  smooth);
-
-  // keep your perfect question glow
-  const qGlow = Math.round(25 + smooth*85);
+  // keep your “perfect” question glow in sync
+  const qGlow = Math.round(25 + smoothLevel * 95);
   questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
 
-  requestAnimationFrame(visualLoop);
+  visRAF = requestAnimationFrame(visualLoop);
 }
 /* ========================================================== */
 
@@ -591,15 +710,14 @@ function setOverlayStep(step){
   tapOverlay.classList.remove('step1','step2','step3');
   tapOverlay.classList.add('step'+step);
 
-  const label = tapOverlayText.querySelector('.label');
-
-  if(step===1) label.textContent = "Click if you really want to enter.";
-  if(step===2) label.textContent = "You can still turn back.";
-  if(step===3) label.textContent = "Enter at your own risk.";
+  if(step===1) tapOverlayText.textContent = "Click if you really want to enter.";
+  if(step===2) tapOverlayText.textContent = "You can still turn back.";
+  if(step===3) tapOverlayText.textContent = "Enter at your own risk.";
 }
 
 setOverlayStep(1);
 
+// Prime other sounds so first YES/NO click has zero lag
 function primeAudio(a){
   const prevMuted = a.muted;
   a.muted = true;
@@ -623,19 +741,18 @@ async function unlockAndStartQuestion(){
   ensureAudioVisuals();
   try{ await audioCtx.resume(); }catch(e){}
 
-  // start visual loop once (this drives glow + bars)
-  if(!window.__visStarted){
-    window.__visStarted = true;
-    visualLoop();
-  }
+  // start visual loop once
+  if(!visRAF) visualLoop();
 
+  // Start question sound (first overlay click)
   try{
     setActiveAudio(questionSound);
     await questionSound.play();
   }catch(e){
-    return;
+    return; // stay on overlay if blocked
   }
 
+  // prime other sounds once for zero-lag first click
   if(!audioPrimed){
     audioPrimed = true;
     primeAudio(happySound);
@@ -643,18 +760,19 @@ async function unlockAndStartQuestion(){
     primeAudio(glassSound);
   }
 
+  // advance overlays (must click each overlay)
   if(overlayStep < 3){
     setOverlayStep(overlayStep + 1);
     return;
   }
 
+  // step 3 -> enter
   tapOverlay.classList.add('hidden');
   yes.style.pointerEvents = '';
   no.style.pointerEvents = '';
 }
 
 tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
-
 </script>
 
 </body>
