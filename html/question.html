@@ -70,7 +70,7 @@ button{
   border-radius:6px;
   border:none;
   cursor:pointer;
-  position:relative; /* needed for ring positioning */
+  position:relative; /* needed for radiators */
 }
 
 /* YES */
@@ -202,6 +202,7 @@ body.blur{
   border-radius:10px;
   text-shadow:0 0 18px #00fff0;
   color:#00fff0;
+  position:relative; /* for overlay radiators */
 }
 
 /* --- 3-step overlay scaling (same style, bigger each time) --- */
@@ -209,98 +210,72 @@ body.blur{
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* ===================== AUDIO RING BARS ===================== */
-.ring{
+/* =================== RADIATING SPECTRUM (CYAN) =================== */
+.radiators{
   position:absolute;
-  inset:-18px;                 /* how far the ring sits from the button */
+  inset:-28px;                 /* how far the spikes sit from the element */
   pointer-events:none;
   opacity:0;
   transition:opacity .12s linear;
 }
-.ring.on{ opacity:1; }
+.radiators.on{ opacity:1; }
 
-.ring .side{
+/* leave corners clean (like your reference bar field) */
+.rside{
   position:absolute;
   display:flex;
   gap:4px;
   opacity:.95;
 }
 
-.ring .barV{
-  width:4px;
-  height:10px;
-  border-radius:2px;
-  background:var(--ring);
-  box-shadow:0 0 12px var(--ring);
-  transform:scaleY(.12);
+/* TOP + BOTTOM: thin vertical bars */
+.rside.top{
+  left:18px; right:18px; top:0;
+  height:24px;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.rside.bottom{
+  left:18px; right:18px; bottom:0;
+  height:24px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.rbarV{
+  width:2px;
+  height:2px;
+  background:#00fff0;
+  box-shadow:0 0 10px rgba(0,255,240,.85);
   transform-origin:bottom;
+  transform:scaleY(.1);
 }
-.ring .barV.down{
-  transform-origin:top;
-}
+.rbarV.down{ transform-origin:top; }
 
-.ring .barH{
-  height:4px;
-  width:10px;
-  border-radius:2px;
-  background:var(--ring);
-  box-shadow:0 0 12px var(--ring);
-  transform:scaleX(.12);
+/* LEFT + RIGHT: thin horizontal bars */
+.rside.left{
+  top:18px; bottom:18px; left:0;
+  width:24px;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.rside.right{
+  top:18px; bottom:18px; right:0;
+  width:24px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.rbarH{
+  height:2px;
+  width:2px;
+  background:#00fff0;
+  box-shadow:0 0 10px rgba(0,255,240,.85);
   transform-origin:right;
+  transform:scaleX(.1);
 }
-.ring .barH.right{
-  transform-origin:left;
-}
-
-/* top: vertical bars that grow upward */
-.ring .top{
-  left:14px; right:14px; top:0;
-  height:18px;
-  align-items:flex-end;
-  justify-content:space-between;
-}
-
-/* bottom: vertical bars that grow downward */
-.ring .bottom{
-  left:14px; right:14px; bottom:0;
-  height:18px;
-  align-items:flex-start;
-  justify-content:space-between;
-}
-
-/* left: horizontal bars that grow outward to the left */
-.ring .left{
-  top:14px; bottom:14px; left:0;
-  width:18px;
-  flex-direction:column;
-  align-items:flex-end;
-  justify-content:space-between;
-}
-
-/* right: horizontal bars that grow outward to the right */
-.ring .right{
-  top:14px; bottom:14px; right:0;
-  width:18px;
-  flex-direction:column;
-  align-items:flex-start;
-  justify-content:space-between;
-}
-
-/* corner diagonal bars to blend */
-.ring .corner{
-  position:absolute;
-  width:12px; height:4px;
-  background:var(--ring);
-  box-shadow:0 0 12px var(--ring);
-  border-radius:2px;
-  opacity:.95;
-  transform:scaleX(.12);
-}
-.ring .tl{ top:6px; left:6px; transform-origin:right; transform:rotate(-45deg) scaleX(.12); }
-.ring .tr{ top:6px; right:6px; transform-origin:left;  transform:rotate(45deg)  scaleX(.12); }
-.ring .bl{ bottom:6px; left:6px; transform-origin:right; transform:rotate(45deg)  scaleX(.12); }
-.ring .br{ bottom:6px; right:6px; transform-origin:left;  transform:rotate(-45deg) scaleX(.12); }
-/* =========================================================== */
+.rbarH.right{ transform-origin:left; }
+/* ================================================================ */
 
 </style>
 </head>
@@ -374,13 +349,12 @@ let analyser = null;
 let dataArr = null;
 let sources = new Map();
 let currentAudioEl = null;
-let ringRAF = null;
 
 function ensureAudioVisuals(){
   if(audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 1024;
+  analyser.fftSize = 2048; // smoother spectrum
   dataArr = new Uint8Array(analyser.frequencyBinCount);
   analyser.connect(audioCtx.destination);
 }
@@ -408,159 +382,203 @@ function setActiveAudio(el){
 }
 /* ========================================================== */
 
-/* ===================== RING CREATION ===================== */
+/* ===================== RADIATORS BUILD ===================== */
 function makeBars(n, cls){
-  const frag = document.createDocumentFragment();
+  const frag=document.createDocumentFragment();
   for(let i=0;i<n;i++){
     const b=document.createElement('span');
     b.className = cls;
-    b.dataset.i = String(i);
     frag.appendChild(b);
   }
   return frag;
 }
 
-function createRing(btn, color){
-  // ring root
-  const ring=document.createElement('div');
-  ring.className='ring';
-  ring.style.setProperty('--ring', color);
+function attachRadiators(target, topCount=64, sideCount=22){
+  const r=document.createElement('div');
+  r.className='radiators';
 
-  // sides
   const top=document.createElement('div');
-  top.className='side top';
-  top.appendChild(makeBars(12,'barV'));
+  top.className='rside top';
+  top.appendChild(makeBars(topCount,'rbarV'));
 
   const bottom=document.createElement('div');
-  bottom.className='side bottom';
-  bottom.appendChild(makeBars(12,'barV down'));
+  bottom.className='rside bottom';
+  bottom.appendChild(makeBars(topCount,'rbarV down'));
 
   const left=document.createElement('div');
-  left.className='side left';
-  left.appendChild(makeBars(8,'barH'));
+  left.className='rside left';
+  left.appendChild(makeBars(sideCount,'rbarH'));
 
   const right=document.createElement('div');
-  right.className='side right';
-  right.appendChild(makeBars(8,'barH right'));
+  right.className='rside right';
+  right.appendChild(makeBars(sideCount,'rbarH right'));
 
-  // corners
-  const tl=document.createElement('div'); tl.className='corner tl';
-  const tr=document.createElement('div'); tr.className='corner tr';
-  const bl=document.createElement('div'); bl.className='corner bl';
-  const br=document.createElement('div'); br.className='corner br';
+  r.appendChild(top);
+  r.appendChild(bottom);
+  r.appendChild(left);
+  r.appendChild(right);
 
-  ring.appendChild(top);
-  ring.appendChild(bottom);
-  ring.appendChild(left);
-  ring.appendChild(right);
-  ring.appendChild(tl);
-  ring.appendChild(tr);
-  ring.appendChild(bl);
-  ring.appendChild(br);
+  target.appendChild(r);
 
-  btn.appendChild(ring);
-
-  return {
-    ring,
-    topBars: top.querySelectorAll('.barV'),
-    bottomBars: bottom.querySelectorAll('.barV'),
-    leftBars: left.querySelectorAll('.barH'),
-    rightBars: right.querySelectorAll('.barH'),
-    corners: { tl, tr, bl, br }
+  const obj = {
+    root:r,
+    topBars:[...top.children],
+    bottomBars:[...bottom.children],
+    leftBars:[...left.children],
+    rightBars:[...right.children],
+    // smoothing buffers
+    topVals:new Float32Array(topCount),
+    bottomVals:new Float32Array(topCount),
+    leftVals:new Float32Array(sideCount),
+    rightVals:new Float32Array(sideCount)
   };
+  return obj;
 }
 
-const yesRing = createRing(yes, '#00fff0');
-const noRing  = createRing(no,  '#ff004c');
-/* ========================================================= */
+// Radiators on YES, NO, and overlay text box (cyan everywhere)
+const yesRad = attachRadiators(yes, 72, 24);
+const noRad  = attachRadiators(no,  72, 24);
+const tapOverlay = document.getElementById('tapOverlay');
+const tapOverlayText = document.getElementById('tapOverlayText');
+const overlayRad = attachRadiators(tapOverlayText, 72, 24);
+/* ========================================================== */
 
-/* ===================== RING ANIMATION LOOP ===================== */
-function avgEnergy(){
-  if(!analyser || !currentAudioEl || currentAudioEl.paused) return 0;
-  analyser.getByteFrequencyData(dataArr);
-  let sum=0;
-  for(let i=0;i<dataArr.length;i++) sum+=dataArr[i];
-  return (sum / dataArr.length) / 255; // 0..1
-}
+/* ===================== SPECTRUM MAPPING ===================== */
+/*
+We use real frequency bins (not average).
+We sample a slice of the spectrum and map it across:
+top -> right -> bottom -> left (radiating outward).
+Also apply smoothing so it feels like a real music player.
+*/
+let visRAF = null;
 
 function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 
-function setRingOn(ringObj, on){
-  if(on) ringObj.ring.classList.add('on');
-  else ringObj.ring.classList.remove('on');
+function updateSideBarsV(bars, vals, fromTop, scalePx, decay){
+  for(let i=0;i<bars.length;i++){
+    // vals already in 0..1
+    vals[i] = Math.max(vals[i]*decay, vals[i]); // safety
+    const h = Math.max(2, 2 + vals[i]*scalePx);
+    bars[i].style.height = h + 'px';
+    // direction already handled by transform-origin classes
+  }
 }
 
-function animateRing(ringObj, energy, bias){
-  const e = clamp01(energy * bias);
-  const on = e > 0.02;
-  setRingOn(ringObj, on);
-
-  const punch = on ? Math.pow(e, 0.65) : 0; // prettier curve
-
-  // top/bottom vertical bars (radiate outward)
-  ringObj.topBars.forEach((bar, idx)=>{
-    const wave = 0.65 + 0.35*Math.sin((idx/ ringObj.topBars.length)*Math.PI*2 + performance.now()/140);
-    const jitter = 0.85 + Math.random()*0.3;
-    const s = 0.10 + punch * wave * jitter;
-    bar.style.transform = `scaleY(${s})`;
-  });
-
-  ringObj.bottomBars.forEach((bar, idx)=>{
-    const wave = 0.65 + 0.35*Math.cos((idx/ ringObj.bottomBars.length)*Math.PI*2 + performance.now()/160);
-    const jitter = 0.85 + Math.random()*0.3;
-    const s = 0.10 + punch * wave * jitter;
-    bar.style.transform = `scaleY(${s})`;
-  });
-
-  // left/right horizontal bars (radiate outward)
-  ringObj.leftBars.forEach((bar, idx)=>{
-    const wave = 0.65 + 0.35*Math.sin((idx/ ringObj.leftBars.length)*Math.PI*2 + performance.now()/150);
-    const jitter = 0.85 + Math.random()*0.3;
-    const s = 0.10 + punch * wave * jitter;
-    bar.style.transform = `scaleX(${s})`;
-  });
-
-  ringObj.rightBars.forEach((bar, idx)=>{
-    const wave = 0.65 + 0.35*Math.cos((idx/ ringObj.rightBars.length)*Math.PI*2 + performance.now()/170);
-    const jitter = 0.85 + Math.random()*0.3;
-    const s = 0.10 + punch * wave * jitter;
-    bar.style.transform = `scaleX(${s})`;
-  });
-
-  // corner diagonals
-  const c = 0.10 + punch * 1.05;
-  ringObj.corners.tl.style.transform = `rotate(-45deg) scaleX(${c})`;
-  ringObj.corners.tr.style.transform = `rotate(45deg) scaleX(${c})`;
-  ringObj.corners.bl.style.transform = `rotate(45deg) scaleX(${c})`;
-  ringObj.corners.br.style.transform = `rotate(-45deg) scaleX(${c})`;
+function updateSideBarsH(bars, vals, scalePx, decay){
+  for(let i=0;i<bars.length;i++){
+    vals[i] = Math.max(vals[i]*decay, vals[i]);
+    const w = Math.max(2, 2 + vals[i]*scalePx);
+    bars[i].style.width = w + 'px';
+  }
 }
 
-function startRingLoop(){
-  if(ringRAF) return;
-
-  const loop=()=>{
-    const energy = avgEnergy();
-
-    // bias depending on which audio is active (so it feels intentional)
-    const isHeartbeat = (currentAudioEl === heartbeat);
-    const isHappy = (currentAudioEl === happySound);
-
-    const yesBias = isHappy ? 1.25 : 1.0;
-    const noBias  = isHeartbeat ? 1.35 : 0.9;
-
-    animateRing(yesRing, energy, yesBias);
-    animateRing(noRing,  energy, noBias);
-
-    // subtle text breathing (more visible than blur, still classy)
-    const qGlow = Math.round(25 + Math.pow(energy,0.7) * 55);
-    questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
-
-    ringRAF = requestAnimationFrame(loop);
-  };
-
-  ringRAF = requestAnimationFrame(loop);
+function setRadiatorsOn(rad, on){
+  if(on) rad.root.classList.add('on');
+  else rad.root.classList.remove('on');
 }
-/* =============================================================== */
+
+function applySpectrum(rad, freq, gain=1){
+  const decay = 0.82;            // smooth fall-off like music players
+  const topN = rad.topBars.length;
+  const sideN = rad.leftBars.length;
+
+  // pick a nice band of bins (skip sub-bass rumble, skip ultra-high hiss)
+  const startBin = 8;
+  const endBin = Math.min(freq.length-1, 520);
+  const band = endBin - startBin;
+
+  // total bars around all sides
+  const total = topN + sideN + topN + sideN;
+
+  // sample bins evenly across bar count
+  for(let i=0;i<topN;i++){
+    const bin = startBin + Math.floor((i / topN) * band);
+    const v = (freq[bin] / 255);
+    // smoothing: rise fast, fall slow
+    rad.topVals[i] = Math.max(rad.topVals[i]*decay, v*v*gain);
+  }
+  for(let i=0;i<sideN;i++){
+    const bin = startBin + Math.floor(((topN + i) / total) * band);
+    const v = (freq[bin] / 255);
+    rad.rightVals[i] = Math.max(rad.rightVals[i]*decay, v*v*gain);
+  }
+  for(let i=0;i<topN;i++){
+    const bin = startBin + Math.floor(((topN + sideN + i) / total) * band);
+    const v = (freq[bin] / 255);
+    rad.bottomVals[i] = Math.max(rad.bottomVals[i]*decay, v*v*gain);
+  }
+  for(let i=0;i<sideN;i++){
+    const bin = startBin + Math.floor(((topN + sideN + topN + i) / total) * band);
+    const v = (freq[bin] / 255);
+    rad.leftVals[i] = Math.max(rad.leftVals[i]*decay, v*v*gain);
+  }
+
+  // scale sizes (radiating feel)
+  const vScale = 46; // px
+  const hScale = 46; // px
+
+  // write to DOM
+  for(let i=0;i<topN;i++){
+    const h = Math.max(2, 2 + rad.topVals[i]*vScale);
+    rad.topBars[i].style.height = h + 'px';
+  }
+  for(let i=0;i<topN;i++){
+    const h = Math.max(2, 2 + rad.bottomVals[i]*vScale);
+    rad.bottomBars[i].style.height = h + 'px';
+  }
+  for(let i=0;i<sideN;i++){
+    const w = Math.max(2, 2 + rad.leftVals[i]*hScale);
+    rad.leftBars[i].style.width = w + 'px';
+  }
+  for(let i=0;i<sideN;i++){
+    const w = Math.max(2, 2 + rad.rightVals[i]*hScale);
+    rad.rightBars[i].style.width = w + 'px';
+  }
+}
+
+function resetRadiators(rad){
+  setRadiatorsOn(rad, false);
+  for(const b of rad.topBars){ b.style.height='2px'; }
+  for(const b of rad.bottomBars){ b.style.height='2px'; }
+  for(const b of rad.leftBars){ b.style.width='2px'; }
+  for(const b of rad.rightBars){ b.style.width='2px'; }
+}
+
+function visualLoop(){
+  const playing = analyser && currentAudioEl && !currentAudioEl.paused;
+
+  if(!playing){
+    resetRadiators(yesRad);
+    resetRadiators(noRad);
+    resetRadiators(overlayRad);
+    visRAF = requestAnimationFrame(visualLoop);
+    return;
+  }
+
+  analyser.getByteFrequencyData(dataArr);
+
+  setRadiatorsOn(yesRad, true);
+  setRadiatorsOn(noRad, true);
+  setRadiatorsOn(overlayRad, true);
+
+  // bias feels intentional per scene, but STILL follows real bins
+  const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
+  const ovGain  = 1.0;
+
+  applySpectrum(yesRad, dataArr, yesGain);
+  applySpectrum(noRad,  dataArr, noGain);
+  applySpectrum(overlayRad, dataArr, ovGain);
+
+  // subtle text breathing
+  const midBin = 90;
+  const v = (dataArr[Math.min(midBin, dataArr.length-1)]/255);
+  const qGlow = Math.round(25 + (v*v)*70);
+  questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
+
+  visRAF = requestAnimationFrame(visualLoop);
+}
+/* ========================================================== */
 
 /* YES FLOW */
 function showYes(){
@@ -710,8 +728,6 @@ style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
 document.head.appendChild(style);
 
 /* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
-const tapOverlay = document.getElementById('tapOverlay');
-const tapOverlayText = document.getElementById('tapOverlayText');
 
 // Block YES/NO until audio is unlocked
 yes.style.pointerEvents = 'none';
@@ -753,14 +769,13 @@ function primeAudio(a){
 }
 
 async function unlockAndStartQuestion(){
-  // WebAudio must be created/resumed on gesture
   ensureAudioVisuals();
   try{ await audioCtx.resume(); }catch(e){}
 
-  // start ring loop once
-  startRingLoop();
+  // start visualizer loop once
+  if(!visRAF) visualLoop();
 
-  // Start question sound
+  // Start question sound (first overlay click)
   try{
     setActiveAudio(questionSound);
     await questionSound.play();
