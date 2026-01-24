@@ -184,13 +184,13 @@ body.blur{
 }
 
 .tapOverlay{
-  position:fixed;inset:0;
+  position:fixed;
+  inset:0;
   z-index:999;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:rgba(0,0,0,.35);
-  backdrop-filter:blur(2px);
+  background:#000;          /* FULL BLACK */
   cursor:pointer;
 }
 .tapOverlay.hidden{display:none}
@@ -200,6 +200,7 @@ body.blur{
   box-shadow:0 0 30px #00fff0;
   border-radius:10px;
   text-shadow:0 0 18px #00fff0;
+  color:#00fff0;
 }
 
 </style>
