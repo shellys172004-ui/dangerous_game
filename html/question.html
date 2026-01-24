@@ -227,11 +227,11 @@ body.blur{
 
 <div class="noModal" id="noModal">
   <h2>I know that wasn’t intentional.</h2>
-  <button id="apology">I meant YES</button>
+  <button id="apology">Sorry, I meant YES!!!!</button>
 </div>
 
 <div class="tapOverlay" id="tapOverlay">
-  <span>Tap anywhere to start sound 🎧</span>
+  <span> Enter at your own risk. </span>
 </div>
 
 
@@ -280,7 +280,6 @@ function showYes(){
   glass.innerHTML='';
   heartbeat.pause();
   questionSound.pause();
-  questionSound.currentTime = 0;
   happySound.currentTime = 0;   // ⬅ ADD THIS
   happySound.play();
   transition.classList.add('active');
@@ -294,8 +293,7 @@ back.onclick=()=>{
   mainUI.classList.remove('hidden');
   happySound.pause();
   happySound.currentTime = 0;
-  questionSound.currentTime = 0;
-  questionSound.play();
+  questionSound.play().catch(()=>{});
 
 
 };
@@ -315,7 +313,6 @@ no.onclick=e=>{
   noModal.classList.add('active');
   heartbeat.currentTime = 0;
   questionSound.pause();
-  questionSound.currentTime = 0;
   heartbeat.play();
   crackFromCenter(e.clientX,e.clientY);
 
