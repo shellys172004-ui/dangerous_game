@@ -269,11 +269,114 @@ const heartbeat=document.getElementById('heartbeat');
 const glassSound=document.getElementById('glassSound');
 const happySound=document.getElementById('happySound');
 const questionSound=document.getElementById('questionSound');
+const questionEl=document.getElementById('question');
 
 questionSound.volume = 0.6;
 
-
 let logoutTimer;
+
+/* -------------------- ADDED: AUDIO-REACTIVE GLOW -------------------- */
+let audioCtx = null;
+let analyser = null;
+let dataArr = null;
+let sources = new Map();
+let currentAudioEl = null;
+let glowRAF = null;
+
+// base shadows (keep your originals)
+const baseYesShadow = '0 0 40px #00fff0';
+const baseNoShadow  = '0 0 35px #ff004c';
+
+function ensureAudioVisuals(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  dataArr = new Uint8Array(analyser.frequencyBinCount);
+
+  // IMPORTANT: connect analyser to destination so audio still plays
+  analyser.connect(audioCtx.destination);
+
+  // start animation loop once
+  startGlowLoop();
+}
+
+function getSourceFor(el){
+  if(sources.has(el)) return sources.get(el);
+  const src = audioCtx.createMediaElementSource(el);
+  sources.set(el, src);
+  return src;
+}
+
+function setActiveAudio(el){
+  if(!audioCtx || !analyser) return;
+  if(currentAudioEl === el) return;
+
+  // disconnect previous
+  if(currentAudioEl && sources.has(currentAudioEl)){
+    try{ sources.get(currentAudioEl).disconnect(); }catch(e){}
+  }
+
+  currentAudioEl = el;
+
+  // connect new: source -> analyser
+  try{
+    const src = getSourceFor(el);
+    src.connect(analyser);
+  }catch(e){}
+}
+
+function startGlowLoop(){
+  if(glowRAF) return;
+
+  function loop(){
+    // default calm glow
+    let energy = 0;
+
+    if(analyser && currentAudioEl && !currentAudioEl.paused){
+      analyser.getByteFrequencyData(dataArr);
+      // average energy (0..255)
+      let sum = 0;
+      for(let i=0;i<dataArr.length;i++) sum += dataArr[i];
+      energy = sum / dataArr.length / 255; // 0..1
+    }
+
+    // shape it so it looks better
+    const punch = Math.min(1, Math.pow(energy, 0.65)); // nicer response
+
+    // apply glow: YES reacts more to cyan-type tracks, NO reacts more to heartbeat
+    // (we keep it simple: whichever is active drives both, but bias NO during heartbeat)
+    const isHeartbeat = (currentAudioEl === heartbeat);
+    const isHappy = (currentAudioEl === happySound);
+
+    const yesBoost = isHappy ? 1.35 : 1.0;
+    const noBoost  = isHeartbeat ? 1.45 : 1.0;
+
+    const yesGlow = Math.min(1, punch * yesBoost);
+    const noGlow  = Math.min(1, punch * noBoost);
+
+    // convert to shadow sizes
+    const yesBlur = Math.round(40 + yesGlow * 70);
+    const noBlur  = Math.round(35 + noGlow * 75);
+
+    // extra layers = "soundbar" vibe
+    yes.style.boxShadow =
+      `${baseYesShadow}, 0 0 ${yesBlur}px rgba(0,255,240,0.95), 0 0 ${Math.round(yesBlur*1.35)}px rgba(0,179,255,0.55)`;
+
+    no.style.boxShadow =
+      `${baseNoShadow}, 0 0 ${noBlur}px rgba(255,0,76,0.95), 0 0 ${Math.round(noBlur*1.25)}px rgba(255,0,76,0.55)`;
+
+    // optional: make the question text breathe too (subtle)
+    const qGlow = Math.round(25 + punch * 45);
+    questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
+
+    glowRAF = requestAnimationFrame(loop);
+  }
+
+  glowRAF = requestAnimationFrame(loop);
+}
+/* ------------------ END ADDED: AUDIO-REACTIVE GLOW ------------------ */
+
 
 /* YES FLOW */
 function showYes(){
@@ -284,7 +387,8 @@ function showYes(){
   glass.innerHTML='';
   heartbeat.pause();
   questionSound.pause();
-  happySound.currentTime = 0;   // ⬅ ADD THIS
+  happySound.currentTime = 0;
+  setActiveAudio(happySound);                 // ADDED
   happySound.play();
   transition.classList.add('active');
 }
@@ -298,10 +402,9 @@ back.onclick=()=>{
   happySound.pause();
   happySound.currentTime = 0;
 
-  // question audio should continue after returning
-  if(questionStartedOnce){
-    questionSound.play().catch(()=>{});
-  }
+  // keep question continuing
+  setActiveAudio(questionSound);              // ADDED
+  questionSound.play().catch(()=>{});
 };
 
 /* NO DODGE */
@@ -319,11 +422,13 @@ no.onclick=e=>{
   noModal.classList.add('active');
   heartbeat.currentTime = 0;
   questionSound.pause();
+  setActiveAudio(heartbeat);                  // ADDED
   heartbeat.play();
   crackFromCenter(e.clientX,e.clientY);
 
   logoutTimer=setTimeout(()=>{
     fullShatter();
+    setActiveAudio(glassSound);               // ADDED
     glassSound.play();
     polygonShardFall(innerWidth/2,innerHeight/2);
     setTimeout(()=>{
@@ -421,8 +526,7 @@ function polygonShardFall(centerX, centerY){
 const style=document.createElement('style');
 style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
 document.head.appendChild(style);
-// Start questionSound on the very first user gesture on the page.
-// Use CAPTURE so it runs before YES/NO click handlers.
+
 /* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
 const tapOverlay = document.getElementById('tapOverlay');
 const tapOverlayText = document.getElementById('tapOverlayText');
@@ -432,7 +536,6 @@ yes.style.pointerEvents = 'none';
 no.style.pointerEvents = 'none';
 
 let overlayStep = 1;
-let questionStartedOnce = false;
 let audioPrimed = false;
 
 function setOverlayStep(step){
@@ -468,15 +571,17 @@ function primeAudio(a){
 }
 
 async function unlockAndStartQuestion(){
-  // Start question sound on first overlay click (and only need to successfully start once)
-  if(!questionStartedOnce){
-    try{
-      await questionSound.play();
-      questionStartedOnce = true;
-    }catch(e){
-      // If blocked, keep overlay and allow retry
-      return;
-    }
+  // Ensure visuals + analyser exist after first gesture
+  ensureAudioVisuals();
+  try{ await audioCtx.resume(); }catch(e){}
+
+  // Start question sound on step 1
+  try{
+    setActiveAudio(questionSound);            // ADDED
+    await questionSound.play();
+  }catch(e){
+    // If blocked, keep overlay and allow retry
+    return;
   }
 
   // After audio is allowed, prime the other sounds once (fixes first-click lag)
@@ -500,7 +605,7 @@ async function unlockAndStartQuestion(){
 }
 
 // One click per overlay step (prevents skipping step 2)
-tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion);
+tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
 
 </script>
 
