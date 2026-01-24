@@ -297,7 +297,11 @@ back.onclick=()=>{
   mainUI.classList.remove('hidden');
   happySound.pause();
   happySound.currentTime = 0;
-  /* questionSound MUST NOT resume once paused, so no play() here */
+
+  // question audio should continue after returning
+  if(questionStartedOnce){
+    questionSound.play().catch(()=>{});
+  }
 };
 
 /* NO DODGE */
@@ -429,6 +433,7 @@ no.style.pointerEvents = 'none';
 
 let overlayStep = 1;
 let questionStartedOnce = false;
+let audioPrimed = false;
 
 function setOverlayStep(step){
   overlayStep = step;
@@ -442,8 +447,28 @@ function setOverlayStep(step){
 
 setOverlayStep(1);
 
+// Prime other sounds so first YES/NO click has zero lag
+function primeAudio(a){
+  const prevMuted = a.muted;
+  a.muted = true;
+  const p = a.play();
+  if(p && typeof p.then === 'function'){
+    p.then(()=>{
+      a.pause();
+      try{ a.currentTime = 0; }catch(e){}
+      a.muted = prevMuted;
+    }).catch(()=>{
+      a.muted = prevMuted;
+    });
+  }else{
+    a.pause();
+    try{ a.currentTime = 0; }catch(e){}
+    a.muted = prevMuted;
+  }
+}
+
 async function unlockAndStartQuestion(){
-  // Start question sound only ONCE (must not resume later)
+  // Start question sound on first overlay click (and only need to successfully start once)
   if(!questionStartedOnce){
     try{
       await questionSound.play();
@@ -452,6 +477,14 @@ async function unlockAndStartQuestion(){
       // If blocked, keep overlay and allow retry
       return;
     }
+  }
+
+  // After audio is allowed, prime the other sounds once (fixes first-click lag)
+  if(!audioPrimed){
+    audioPrimed = true;
+    primeAudio(happySound);
+    primeAudio(heartbeat);
+    primeAudio(glassSound);
   }
 
   // advance overlay steps
@@ -466,7 +499,7 @@ async function unlockAndStartQuestion(){
   no.style.pointerEvents = '';
 }
 
-// Click progresses: 1->2->3->enter (audio starts on first click)
+// One click per overlay step (prevents skipping step 2)
 tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion);
 
 </script>
