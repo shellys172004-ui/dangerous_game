@@ -392,6 +392,16 @@ function polygonShardFall(centerX, centerY){
 const style=document.createElement('style');
 style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
 document.head.appendChild(style);
+document.addEventListener('click', () => {
+  if (
+    !transition.classList.contains('active') &&
+    !noModal.classList.contains('active')
+  ) {
+    questionSound.currentTime = 0;
+    questionSound.play();
+  }
+}, { once: true });
+
 </script>
 
 </body>
