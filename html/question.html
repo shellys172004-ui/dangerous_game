@@ -79,9 +79,9 @@ button{
   box-shadow:0 0 40px #00fff0;
 }
 
-/* NO */
+/* NO (✅ FIX: start as normal so it shows; we switch to absolute only when dodging) */
 #no{
-  position:absolute;
+  position:relative;
   background:#ff004c;
   color:#fff;
   box-shadow:0 0 35px #ff004c;
@@ -183,6 +183,7 @@ body.blur{
   transition:filter .6s ease;
 }
 
+/* OVERLAY */
 .tapOverlay{
   position:fixed;
   inset:0;
@@ -190,10 +191,19 @@ body.blur{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:#000;          /* FULL BLACK */
+  background:#000;
   cursor:pointer;
 }
 .tapOverlay.hidden{display:none}
+
+/* ✅ FIX: wrapper for overlay so aura can size + layer correctly */
+.overlayWrap{
+  position:relative;
+  display:inline-block;
+  overflow:visible;
+  z-index:1000;
+}
+
 .tapOverlay span{
   padding:14px 18px;
   border:1px solid #00fff0;
@@ -202,6 +212,7 @@ body.blur{
   text-shadow:0 0 18px #00fff0;
   color:#00fff0;
   position:relative;
+  z-index:2;
 }
 
 /* --- 3-step overlay scaling (same style, bigger each time) --- */
@@ -209,9 +220,9 @@ body.blur{
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* ===================== AURA BARS (FIXED GEOMETRY) ===================== */
+/* ===================== AURA BARS ===================== */
 .btnWrap{
-  position:relative;          /* ✅ FIX: anchor absolute NO inside wrap */
+  position:relative;
   display:inline-block;
   overflow:visible;
 }
@@ -220,16 +231,10 @@ body.blur{
   z-index:2;
 }
 
-/* ✅ FIX: overlay wrapper so aura shows */
-.overlayWrap{
-  position:relative;
-  display:inline-block;
-  overflow:visible;
-}
-
+/* close to element edge */
 .aura{
   position:absolute;
-  inset:-6px;                 /* ✅ FIX: emerge from button, not far away */
+  inset:-6px;
   pointer-events:none;
   opacity:0;
   transition:opacity .10s linear;
@@ -243,7 +248,6 @@ body.blur{
   opacity:.95;
 }
 
-/* ✅ FIX: no inner padding offsets; sides align consistently */
 .aura .top{
   left:0; right:0; top:0;
   height:0;
@@ -285,7 +289,6 @@ body.blur{
   box-shadow:0 0 10px rgba(0,255,240,.9);
   border-radius:1px;
 }
-/* ======================================================================= */
 </style>
 </head>
 
@@ -460,34 +463,48 @@ const noAura  = makeAura(noWrap);
 const ovAura  = makeAura(overlayWrap);
 /* ========================================================== */
 
-/* ===================== VISUAL LOOP (EXAGGERATED + SLOWER FALL) ===================== */
+/* ===================== VISUAL LOOP (4-BAR DELAY PATTERN) ===================== */
 let visRAF = null;
 let smoothLevel = 0;
+
+/* ✅ NEW: 4-phase delayed levels (1st fastest, then increasing delay) */
+let phaseLvls = [0,0,0,0];
 
 function setAuraOn(a, on){
   if(on) a.aura.classList.add('on');
   else a.aura.classList.remove('on');
 }
 
-function applyAura(a, level){
-  const maxV = 70;  /* ✅ more exaggeration */
-  const maxH = 70;
+function applyAura(a, levelForPhaseIndex){
+  const maxV = 78;  // exaggerated
+  const maxH = 78;
 
-  for(const b of a.topBars){
+  // top/bottom bars use phase by index%4
+  for(let i=0;i<a.topBars.length;i++){
+    const b = a.topBars[i];
     const w = parseFloat(b.dataset.w);
-    b.style.height = (2 + level * w * maxV) + 'px';
+    const lvl = levelForPhaseIndex[i & 3]; // 0..3 pattern
+    b.style.height = (2 + lvl * w * maxV) + 'px';
   }
-  for(const b of a.bottomBars){
+  for(let i=0;i<a.bottomBars.length;i++){
+    const b = a.bottomBars[i];
     const w = parseFloat(b.dataset.w);
-    b.style.height = (2 + level * w * maxV) + 'px';
+    const lvl = levelForPhaseIndex[i & 3];
+    b.style.height = (2 + lvl * w * maxV) + 'px';
   }
-  for(const b of a.leftBars){
+
+  // side bars also phase by index%4
+  for(let i=0;i<a.leftBars.length;i++){
+    const b = a.leftBars[i];
     const w = parseFloat(b.dataset.w);
-    b.style.width = (2 + level * w * maxH) + 'px';
+    const lvl = levelForPhaseIndex[i & 3];
+    b.style.width = (2 + lvl * w * maxH) + 'px';
   }
-  for(const b of a.rightBars){
+  for(let i=0;i<a.rightBars.length;i++){
+    const b = a.rightBars[i];
     const w = parseFloat(b.dataset.w);
-    b.style.width = (2 + level * w * maxH) + 'px';
+    const lvl = levelForPhaseIndex[i & 3];
+    b.style.width = (2 + lvl * w * maxH) + 'px';
   }
 }
 
@@ -497,15 +514,40 @@ function getMusicLevel(){
   const start = 18;
   const end = Math.min(dataArr.length-1, 220);
 
-  let sum = 0;
-  let n = 0;
+  let sum = 0, n = 0;
   for(let i=start;i<=end;i++){
     sum += dataArr[i];
     n++;
   }
   let v = (sum / n) / 255;
-  v = v * v;  // same as glow feel
+  v = v * v;
   return v;
+}
+
+function updatePhases(target){
+  // Fast attack + slow decay for master level
+  if(target > smoothLevel){
+    smoothLevel += (target - smoothLevel) * 0.35;
+  }else{
+    smoothLevel *= 0.94;
+  }
+
+  // Exaggerate peaks
+  const shaped = Math.min(1, Math.pow(smoothLevel, 0.75));
+
+  // ✅ NEW: 4 delay phases — increasing lag
+  // phase 0 follows quickest, phase 3 slowest
+  const a0 = 0.35; // fastest
+  const a1 = 0.22;
+  const a2 = 0.14;
+  const a3 = 0.09; // slowest
+
+  phaseLvls[0] += (shaped - phaseLvls[0]) * a0;
+  phaseLvls[1] += (shaped - phaseLvls[1]) * a1;
+  phaseLvls[2] += (shaped - phaseLvls[2]) * a2;
+  phaseLvls[3] += (shaped - phaseLvls[3]) * a3;
+
+  return shaped;
 }
 
 function visualLoop(){
@@ -515,24 +557,20 @@ function visualLoop(){
     setAuraOn(yesAura,false);
     setAuraOn(noAura,false);
     setAuraOn(ovAura,false);
+
     smoothLevel *= 0.92;
-    applyAura(yesAura, 0);
-    applyAura(noAura, 0);
-    applyAura(ovAura, 0);
+    for(let i=0;i<4;i++) phaseLvls[i] *= 0.90;
+
+    applyAura(yesAura, [0,0,0,0]);
+    applyAura(noAura,  [0,0,0,0]);
+    applyAura(ovAura,  [0,0,0,0]);
+
     visRAF = requestAnimationFrame(visualLoop);
     return;
   }
 
   const raw = getMusicLevel();
-
-  /* ✅ FIX: fast attack + slow decay (more musical + exaggerated) */
-  if(raw > smoothLevel){
-    smoothLevel += (raw - smoothLevel) * 0.35;  // fast attack
-  }else{
-    smoothLevel *= 0.94;                        // slower fall
-  }
-
-  const shaped = Math.min(1, Math.pow(smoothLevel, 0.75)); // exaggerate peaks
+  const shaped = updatePhases(raw);
 
   const on = shaped > 0.012;
   setAuraOn(yesAura, on);
@@ -542,11 +580,14 @@ function visualLoop(){
   const yesGain = (currentAudioEl === happySound) ? 1.22 : 1.00;
   const noGain  = (currentAudioEl === heartbeat) ? 1.30 : 1.00;
 
-  applyAura(yesAura, Math.min(1, shaped * yesGain));
-  applyAura(noAura,  Math.min(1, shaped * noGain));
-  applyAura(ovAura,  shaped);
+  const yesPh = phaseLvls.map(v => Math.min(1, v * yesGain));
+  const noPh  = phaseLvls.map(v => Math.min(1, v * noGain));
+  const ovPh  = phaseLvls.slice(); // same
 
-  /* keep your question glow in sync */
+  applyAura(yesAura, yesPh);
+  applyAura(noAura,  noPh);
+  applyAura(ovAura,  ovPh);
+
   const qGlow = Math.round(25 + shaped * 95);
   questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
 
@@ -582,10 +623,22 @@ back.onclick=()=>{
   questionSound.play().catch(()=>{});
 };
 
-/* NO DODGE (keeps your existing logic) */
+/* NO DODGE (✅ FIX: make it absolute only when dodging starts, so it shows initially) */
+let noActivatedAbsolute = false;
 document.addEventListener('mousemove',e=>{
   const r=no.getBoundingClientRect();
   if(Math.hypot(e.clientX-r.left,e.clientY-r.top)<120){
+
+    if(!noActivatedAbsolute){
+      noActivatedAbsolute = true;
+      no.style.position = 'absolute';
+      // anchor it where it currently is, so it doesn't jump weirdly
+      const wrapRect = noWrap.getBoundingClientRect();
+      const btnRect = r;
+      no.style.left = (btnRect.left - wrapRect.left) + 'px';
+      no.style.top  = (btnRect.top  - wrapRect.top ) + 'px';
+    }
+
     no.style.left=Math.random()*(innerWidth-120)+'px';
     no.style.top=Math.random()*(innerHeight-60)+'px';
   }
@@ -613,7 +666,7 @@ no.onclick=e=>{
   },10000);
 };
 
-/* ====== CRACKS / SHARDS: left as-is (your functions) ====== */
+/* ===== CRACKS (kept as in your file) ===== */
 function crackSeed(x, y) {
   for (let i = 0; i < 6; i++) {
     let path = `M ${x} ${y}`;
@@ -642,11 +695,13 @@ function crackGrowth() {
 }
 growthInterval = setInterval(crackGrowth, 1000);
 
+/* SHARDS (kept as in your file) */
 function polygonShardFall(centerX, centerY){
   const shardCount = 90;
   for(let i=0;i<shardCount;i++){
     const f = document.createElement('div');
     f.classList.add('fragment');
+
     const shapes = [
       'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
       'polygon(0 0, 100% 10%, 90% 100%, 10% 90%)',
