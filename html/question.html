@@ -212,7 +212,7 @@ body.blur{
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
 <audio id="glassSound" src="glass.mp3"></audio>
 <audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
-
+<audio id="questionSound" src="question.mp3" loop></audio>
 
 <script>
 /* SPRINKLES */
@@ -237,6 +237,10 @@ const glass=document.getElementById('glass');
 const heartbeat=document.getElementById('heartbeat');
 const glassSound=document.getElementById('glassSound');
 const happySound=document.getElementById('happySound');
+const questionSound=document.getElementById('questionSound');
+
+questionSound.volume = 0.6;
+questionSound.currentTime = 0;
 
 
 let logoutTimer;
@@ -249,6 +253,8 @@ function showYes(){
   document.body.classList.remove('crt','blur');
   glass.innerHTML='';
   heartbeat.pause();
+  questionSound.pause();
+  questionSound.currentTime = 0;
   happySound.currentTime = 0;   // ⬅ ADD THIS
   happySound.play();
   transition.classList.add('active');
@@ -261,6 +267,10 @@ back.onclick=()=>{
   transition.classList.remove('active');
   mainUI.classList.remove('hidden');
   happySound.pause();
+  happySound.currentTime = 0;
+  questionSound.currentTime = 0;
+  questionSound.play();
+
 
 };
 
@@ -278,6 +288,8 @@ no.onclick=e=>{
   document.body.classList.add('crt');
   noModal.classList.add('active');
   heartbeat.currentTime = 0;
+  questionSound.pause();
+  questionSound.currentTime = 0;
   heartbeat.play();
   crackFromCenter(e.clientX,e.clientY);
 
