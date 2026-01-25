@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Radiating Bars Test</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Make Your Choice</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
@@ -66,32 +67,123 @@ button{
   margin:12px;
   font-family:'Orbitron';
   font-size:1rem;
-  border-radius:10px;
+  border-radius:6px;
   border:none;
   cursor:pointer;
+  position:relative; /* needed for radiators */
 }
 
 /* YES */
 #yes{
   background:linear-gradient(135deg,#00fff0,#00b3ff);
   color:#000;
-  box-shadow:0 0 40px rgba(0,255,240,.35);
+  box-shadow:0 0 40px #00fff0;
 }
 
 /* NO */
 #no{
+  position:absolute;
   background:#ff004c;
   color:#fff;
-  box-shadow:0 0 35px rgba(255,0,76,.35);
+  box-shadow:0 0 35px #ff004c;
 }
 
-/* wraps so canvases can follow */
-.wrap{
-  position:relative;
-  display:inline-block;
+/* YES TRANSITION SCREEN (RESTORED) */
+.transition{
+  position:fixed;inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  pointer-events:none;
+  z-index:6;
+  transition:opacity .6s ease;
+}
+.transition.active{opacity:1;pointer-events:auto}
+
+.transition h1{
+  font-size:2.2rem;
+  text-shadow:0 0 30px #00fff0;
+  animation:glitch .25s infinite;
+}
+@keyframes glitch{
+  25%{transform:translate(-2px,2px)}
+  50%{transform:translate(2px,-2px)}
 }
 
-/* Overlay */
+.transition p{margin-top:12px;opacity:.85}
+
+/* GO BACK BUTTON */
+.transition button{
+  margin-top:30px;
+  background:transparent;
+  color:#00fff0;
+  border:1px solid #00fff0;
+  box-shadow:0 0 25px #00fff0;
+}
+.transition button:hover{
+  background:#00fff0;
+  color:#000;
+}
+
+/* CRT */
+body.crt::before{
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,.25) 0,
+    rgba(0,0,0,.25) 1px,
+    transparent 2px
+  );
+  pointer-events:none;
+  z-index:20;
+}
+body.crt{animation:jitter .15s infinite}
+@keyframes jitter{50%{transform:translate(1px,-1px)}}
+
+/* GLASS */
+#glass{position:fixed;inset:0;pointer-events:none;z-index:4}
+
+/* NO MODAL */
+.noModal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.85);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  pointer-events:none;
+  z-index:7;
+}
+.noModal.active{opacity:1;pointer-events:auto}
+
+.noModal button{
+  background:transparent;
+  color:#00fff0;
+  border:1px solid #00fff0;
+  box-shadow:0 0 30px #00fff0;
+}
+
+/* SHARDS */
+.shard{
+  position:fixed;
+  width:30px;height:30px;
+  background:#00fff0;
+  clip-path:polygon(50% 0%,100% 30%,80% 100%,20% 100%,0% 30%);
+  box-shadow:0 0 20px #00fff0,0 0 40px rgba(0,255,240,.9);
+  pointer-events:none;
+  z-index:8;
+}
+
+/* BLUR */
+body.blur{
+  filter:blur(6px) brightness(.85);
+  transition:filter .6s ease;
+}
+
 .tapOverlay{
   position:fixed;
   inset:0;
@@ -103,66 +195,121 @@ button{
   cursor:pointer;
 }
 .tapOverlay.hidden{display:none}
-
-.overlayWrap{
-  position:relative;
-  display:inline-block;
-  overflow:visible;
-}
-
 .tapOverlay span{
   padding:14px 18px;
   border:1px solid #00fff0;
-  box-shadow:0 0 30px rgba(0,255,240,.55);
-  border-radius:18px;
+  box-shadow:0 0 30px #00fff0;
+  border-radius:10px;
   text-shadow:0 0 18px #00fff0;
   color:#00fff0;
-  position:relative;
-  z-index:2;
-  background:rgba(0,0,0,.15);
+  position:relative; /* for overlay radiators */
 }
 
-/* overlay scaling */
+/* --- 3-step overlay scaling --- */
 .tapOverlay.step1 span{ font-size:1.05rem; transform:scale(1); }
 .tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
 .tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
 
-/* small helper */
-.hint{
-  margin-top:18px;
-  opacity:.7;
-  font-size:.9rem;
+/* =================== DENSE RADIATING SPECTRUM (CYAN) =================== */
+.radiators{
+  position:absolute;
+  inset:-32px;                 /* outward aura distance */
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .12s linear;
 }
+.radiators.on{ opacity:1; }
+
+.rside{
+  position:absolute;
+  display:flex;
+  gap:2px;                     /* tighter like your reference */
+  opacity:.95;
+}
+
+/* TOP + BOTTOM: thin vertical bars */
+.rside.top{
+  left:18px; right:18px; top:0;
+  height:28px;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.rside.bottom{
+  left:18px; right:18px; bottom:0;
+  height:28px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.rbarV{
+  width:1px;                   /* finer */
+  height:2px;
+  background:#00fff0;
+  box-shadow:0 0 8px rgba(0,255,240,.85);
+  transform-origin:bottom;
+  transform:scaleY(.08);
+}
+.rbarV.down{ transform-origin:top; }
+
+/* LEFT + RIGHT: thin horizontal bars */
+.rside.left{
+  top:18px; bottom:18px; left:0;
+  width:28px;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.rside.right{
+  top:18px; bottom:18px; right:0;
+  width:28px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.rbarH{
+  height:1px;                  /* finer */
+  width:2px;
+  background:#00fff0;
+  box-shadow:0 0 8px rgba(0,255,240,.85);
+  transform-origin:right;
+  transform:scaleX(.08);
+}
+.rbarH.right{ transform-origin:left; }
+/* ====================================================================== */
+
 </style>
 </head>
 
 <body>
+
 <div class="background"></div>
 <div class="sprinkles" id="sprinkles"></div>
+<svg id="glass"></svg>
 
 <div class="ui" id="mainUI">
   <h2 id="question">Will you be my valentine?</h2>
+  <button id="yes">YES</button>
+  <button id="no">NO</button>
+</div>
 
-  <div class="wrap" id="yesWrap">
-    <button id="yes">YES</button>
-  </div>
+<div class="transition" id="transition">
+  <h1>"yAyAyAyAyAY" 🎮🔥</h1>
+  <p>You made the wise choice 😌💙</p>
+  <button id="back">GO BACK</button>
+</div>
 
-  <div class="wrap" id="noWrap">
-    <button id="no">NO</button>
-  </div>
-
-  <div class="hint">(Test rig: overlay + radiating bars + audio envelope)</div>
+<div class="noModal" id="noModal">
+  <h2>I know that wasn’t intentional.</h2>
+  <button id="apology">Sorry, I meant YES!!!!</button>
 </div>
 
 <div class="tapOverlay step1" id="tapOverlay">
-  <div class="overlayWrap" id="overlayWrap">
-    <span id="tapOverlayText">Click if you really want to enter.</span>
-  </div>
+  <span id="tapOverlayText">Click if you really want to enter.</span>
 </div>
 
-<audio id="questionSound" src="question.mp3" loop></audio>
-<audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
 <audio id="heartbeat" src="heartbeat.mp3" loop></audio>
+<audio id="glassSound" src="glass.mp3"></audio>
+<audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
+<audio id="questionSound" src="question.mp3" loop></audio>
 
 <script>
 /* SPRINKLES */
@@ -176,24 +323,25 @@ for(let i=0;i<50;i++){
 }
 
 /* ELEMENTS */
-const yes = document.getElementById('yes');
-const no = document.getElementById('no');
-const yesWrap = document.getElementById('yesWrap');
-const noWrap = document.getElementById('noWrap');
-
-const questionEl = document.getElementById('question');
-
-const tapOverlay = document.getElementById('tapOverlay');
-const overlayWrap = document.getElementById('overlayWrap');
-const tapOverlayText = document.getElementById('tapOverlayText');
-
-const questionSound = document.getElementById('questionSound');
-const happySound = document.getElementById('happySound');
-const heartbeat = document.getElementById('heartbeat');
+const yes=document.getElementById('yes');
+const no=document.getElementById('no');
+const mainUI=document.getElementById('mainUI');
+const transition=document.getElementById('transition');
+const back=document.getElementById('back');
+const noModal=document.getElementById('noModal');
+const apology=document.getElementById('apology');
+const glass=document.getElementById('glass');
+const heartbeat=document.getElementById('heartbeat');
+const glassSound=document.getElementById('glassSound');
+const happySound=document.getElementById('happySound');
+const questionSound=document.getElementById('questionSound');
+const questionEl=document.getElementById('question');
+const tapOverlay=document.getElementById('tapOverlay');
+const tapOverlayText=document.getElementById('tapOverlayText');
 
 questionSound.volume = 0.6;
-happySound.volume = 1.0;
-heartbeat.volume = 0.85;
+
+let logoutTimer;
 
 /* ===================== AUDIO ANALYSER ===================== */
 let audioCtx = null;
@@ -202,11 +350,11 @@ let dataArr = null;
 let sources = new Map();
 let currentAudioEl = null;
 
-function ensureAudio(){
+function ensureAudioVisuals(){
   if(audioCtx) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048;
+  analyser.fftSize = 4096;               // denser bins => smoother visualizer
   dataArr = new Uint8Array(analyser.frequencyBinCount);
   analyser.connect(audioCtx.destination);
 }
@@ -232,348 +380,340 @@ function setActiveAudio(el){
     src.connect(analyser);
   }catch(e){}
 }
-
-function getEnergy(){
-  analyser.getByteFrequencyData(dataArr);
-
-  // "glow-like" envelope (midband average)
-  const start = 18;
-  const end = Math.min(dataArr.length-1, 220);
-
-  let sum=0, n=0;
-  for(let i=start;i<=end;i++){ sum += dataArr[i]; n++; }
-  let v = (sum/n)/255;  // 0..1
-  v = v*v;              // curve, like your glow
-  return v;
-}
 /* ========================================================== */
 
-/* ===================== RADIATOR (YOUR SKETCH) ===================== */
-/*
-  We draw ultra-thin "hairline" bars emanating outward from the element outline.
-  Key rules:
-  - Mirror symmetry: bar i and bar (N-1-i) behave identically (same delayed envelope)
-  - Delay increases as you move away from the center of a side
-  - Corners get diagonal "blend" bars
-*/
-
-class Radiator {
-  constructor(targetEl, color="#00fff0"){
-    this.el = targetEl;
-    this.color = color;
-
-    this.canvas = document.createElement('canvas');
-    this.ctx = this.canvas.getContext('2d');
-
-    this.canvas.style.position = 'fixed';
-    this.canvas.style.left = '0';
-    this.canvas.style.top = '0';
-    this.canvas.style.pointerEvents = 'none';
-    this.canvas.style.zIndex = '998'; // under overlay content but above bg
-
-    document.body.appendChild(this.canvas);
-
-    this.dpr = Math.max(1, window.devicePixelRatio || 1);
-
-    this.lastRectKey = "";
-    this.sides = null; // cached bar descriptors per side
-    this.cornerBars = null;
-
-    // delayed envelopes by "distance group"
-    this.groupLevels = [];
+/* ===================== RADIATORS BUILD ===================== */
+function makeBars(n, cls){
+  const frag=document.createDocumentFragment();
+  for(let i=0;i<n;i++){
+    const b=document.createElement('span');
+    b.className = cls;
+    frag.appendChild(b);
   }
-
-  destroy(){
-    try{ this.canvas.remove(); }catch(e){}
-  }
-
-  _build(rect){
-    // compute bar spacing so it never becomes a blob
-    // smaller spacing => more bars, but we keep it reasonable
-    const spacing = 6; // px between bars along edge (fine but visible)
-    const inset = 2;   // how close to edge the bar base sits
-
-    const w = rect.width;
-    const h = rect.height;
-
-    const topN = Math.max(18, Math.floor(w / spacing));
-    const sideN = Math.max(14, Math.floor(h / spacing));
-
-    const makeSide = (N, axisLen) => {
-      // bars indexed 0..N-1, center at (N-1)/2
-      const center = (N-1)/2;
-      // groupCount is ceil(N/2), group 0 at center, larger toward ends
-      const groupCount = Math.ceil(N/2);
-      return { N, center, groupCount, axisLen };
-    };
-
-    this.sides = {
-      top: makeSide(topN, w),
-      bottom: makeSide(topN, w),
-      left: makeSide(sideN, h),
-      right: makeSide(sideN, h),
-      inset
-    };
-
-    // maximum group count across sides -> allocate delayed levels
-    const maxGroups = Math.max(
-      this.sides.top.groupCount,
-      this.sides.left.groupCount
-    );
-    this.groupLevels = new Array(maxGroups).fill(0);
-
-    // corner blend bars (diagonals)
-    // (small fan of bars, same "grouping" outward)
-    const cornerFan = 9;
-    this.cornerBars = { cornerFan };
-
-    // resize canvas to viewport
-    this.canvas.width = Math.floor(innerWidth * this.dpr);
-    this.canvas.height = Math.floor(innerHeight * this.dpr);
-    this.canvas.style.width = innerWidth + "px";
-    this.canvas.style.height = innerHeight + "px";
-    this.ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
-  }
-
-  _updateGroups(master){
-    // master is 0..1
-    // group 0 follows fastest; groups farther away lag more
-    // we exaggerate the difference so it is OBVIOUS (your screenshot issue)
-    for(let g=0; g<this.groupLevels.length; g++){
-      const lag = Math.min(0.26, 0.06 + g * 0.028); // bigger g => more lag
-      // attack faster than decay for punchy peaks
-      const cur = this.groupLevels[g];
-      const target = master;
-      let next;
-      if(target > cur){
-        next = cur + (target - cur) * (0.55 - lag); // fast attack
-      }else{
-        next = cur + (target - cur) * (0.16 - lag*0.35); // slower decay
-      }
-      this.groupLevels[g] = Math.max(0, Math.min(1, next));
-    }
-  }
-
-  _groupForIndex(i, N){
-    // mirror-symmetric "distance from center" groups
-    // i and N-1-i map to same group
-    const center = (N-1)/2;
-    const dist = Math.abs(i - center);
-    // integer group: 0 near center, increasing outward
-    return Math.floor(dist);
-  }
-
-  _drawBar(x1,y1, x2,y2, alpha=1){
-    const c = this.ctx;
-    c.globalAlpha = alpha;
-    c.beginPath();
-    c.moveTo(x1,y1);
-    c.lineTo(x2,y2);
-    c.stroke();
-  }
-
-  render(masterEnergy){
-    const rect = this.el.getBoundingClientRect();
-    if(rect.width < 5 || rect.height < 5) return;
-
-    const key = `${Math.round(rect.left)}|${Math.round(rect.top)}|${Math.round(rect.width)}|${Math.round(rect.height)}|${Math.round(innerWidth)}|${Math.round(innerHeight)}|${this.dpr}`;
-    if(key !== this.lastRectKey){
-      this.lastRectKey = key;
-      this._build(rect);
-    }
-
-    // Update delayed envelopes
-    this._updateGroups(masterEnergy);
-
-    const c = this.ctx;
-    c.clearRect(0,0,innerWidth,innerHeight);
-
-    const x0 = rect.left;
-    const y0 = rect.top;
-    const w = rect.width;
-    const h = rect.height;
-
-    // styling
-    c.lineWidth = 1;
-    c.strokeStyle = this.color;
-
-    // glow-ish stroke (subtle)
-    c.shadowColor = this.color;
-    c.shadowBlur = 10;
-
-    const inset = this.sides.inset;
-
-    // exaggeration for length (you asked)
-    const minLen = 3;
-    const maxLen = 36;
-
-    // helper to get side “weight curve” (stronger near center)
-    function edgeWeight(t){
-      // t 0..1, peak at center
-      return 0.35 + 0.65*Math.sin(Math.PI*t);
-    }
-
-    // TOP
-    {
-      const {N} = this.sides.top;
-      for(let i=0;i<N;i++){
-        const t = i/(N-1);
-        const gx = x0 + t*w;
-        const gy = y0 + inset;
-
-        const group = this._groupForIndex(i, N);
-        const lvl = this.groupLevels[Math.min(group, this.groupLevels.length-1)];
-
-        const len = minLen + (lvl * edgeWeight(t) * maxLen);
-        this._drawBar(gx, gy, gx, gy - len, 0.95);
-      }
-    }
-
-    // BOTTOM
-    {
-      const {N} = this.sides.bottom;
-      for(let i=0;i<N;i++){
-        const t = i/(N-1);
-        const gx = x0 + t*w;
-        const gy = y0 + h - inset;
-
-        const group = this._groupForIndex(i, N);
-        const lvl = this.groupLevels[Math.min(group, this.groupLevels.length-1)];
-
-        const len = minLen + (lvl * edgeWeight(t) * maxLen);
-        this._drawBar(gx, gy, gx, gy + len, 0.95);
-      }
-    }
-
-    // LEFT
-    {
-      const {N} = this.sides.left;
-      for(let i=0;i<N;i++){
-        const t = i/(N-1);
-        const gx = x0 + inset;
-        const gy = y0 + t*h;
-
-        const group = this._groupForIndex(i, N);
-        const lvl = this.groupLevels[Math.min(group, this.groupLevels.length-1)];
-
-        const len = minLen + (lvl * edgeWeight(t) * maxLen);
-        this._drawBar(gx, gy, gx - len, gy, 0.95);
-      }
-    }
-
-    // RIGHT
-    {
-      const {N} = this.sides.right;
-      for(let i=0;i<N;i++){
-        const t = i/(N-1);
-        const gx = x0 + w - inset;
-        const gy = y0 + t*h;
-
-        const group = this._groupForIndex(i, N);
-        const lvl = this.groupLevels[Math.min(group, this.groupLevels.length-1)];
-
-        const len = minLen + (lvl * edgeWeight(t) * maxLen);
-        this._drawBar(gx, gy, gx + len, gy, 0.95);
-      }
-    }
-
-    // CORNER BLENDS (diagonal mini-fan)
-    // These help make the “hairline aura” look continuous around corners
-    {
-      const fan = this.cornerBars.cornerFan; // number of diagonals per corner
-      const angles = [];
-      for(let k=0;k<fan;k++){
-        // spread angles around diagonal direction
-        // each corner has its own base diagonal angle
-        const spread = (k/(fan-1) - 0.5) * (Math.PI/5);
-        angles.push(spread);
-      }
-
-      // use the "outermost" group (slowest) but still reactive
-      const cornerLvl = this.groupLevels[Math.min(this.groupLevels.length-1, 10)] || this.groupLevels[this.groupLevels.length-1];
-      const cornerLen = 2 + cornerLvl * 22;
-
-      function drawFan(self, cx, cy, baseAngle){
-        for(let k=0;k<fan;k++){
-          const a = baseAngle + angles[k];
-          const dx = Math.cos(a);
-          const dy = Math.sin(a);
-          const l = cornerLen * (0.55 + 0.45*(k/(fan-1)));
-          self._drawBar(cx, cy, cx + dx*l, cy + dy*l, 0.9);
-        }
-      }
-
-      // TL: up-left
-      drawFan(this, x0+inset, y0+inset, -3*Math.PI/4);
-      // TR: up-right
-      drawFan(this, x0+w-inset, y0+inset, -Math.PI/4);
-      // BL: down-left
-      drawFan(this, x0+inset, y0+h-inset, 3*Math.PI/4);
-      // BR: down-right
-      drawFan(this, x0+w-inset, y0+h-inset, Math.PI/4);
-    }
-  }
+  return frag;
 }
+
+function attachRadiators(target, topCount=96, sideCount=34){
+  const r=document.createElement('div');
+  r.className='radiators';
+
+  const top=document.createElement('div');
+  top.className='rside top';
+  top.appendChild(makeBars(topCount,'rbarV'));
+
+  const bottom=document.createElement('div');
+  bottom.className='rside bottom';
+  bottom.appendChild(makeBars(topCount,'rbarV down'));
+
+  const left=document.createElement('div');
+  left.className='rside left';
+  left.appendChild(makeBars(sideCount,'rbarH'));
+
+  const right=document.createElement('div');
+  right.className='rside right';
+  right.appendChild(makeBars(sideCount,'rbarH right'));
+
+  r.appendChild(top);
+  r.appendChild(bottom);
+  r.appendChild(left);
+  r.appendChild(right);
+
+  target.appendChild(r);
+
+  // "peak hold" buffers: separate from instant values
+  return {
+    root:r,
+    topBars:[...top.children],
+    bottomBars:[...bottom.children],
+    leftBars:[...left.children],
+    rightBars:[...right.children],
+    topVal:new Float32Array(topCount),
+    botVal:new Float32Array(topCount),
+    leftVal:new Float32Array(sideCount),
+    rightVal:new Float32Array(sideCount),
+    topPeak:new Float32Array(topCount),
+    botPeak:new Float32Array(topCount),
+    leftPeak:new Float32Array(sideCount),
+    rightPeak:new Float32Array(sideCount)
+  };
+}
+
+// cyan everywhere: yes/no/overlay box
+const yesRad = attachRadiators(yes, 96, 34);
+const noRad  = attachRadiators(no,  96, 34);
+const overlayRad = attachRadiators(tapOverlayText, 96, 34);
 /* ========================================================== */
 
-/* Create radiators */
-const radOverlay = new Radiator(overlayWrap, "#00fff0");
-const radYes = new Radiator(yesWrap, "#00fff0");
-const radNo  = new Radiator(noWrap,  "#ff004c");
+/* ===================== DENSE SPECTRUM + PEAK HOLD ===================== */
+let visRAF = null;
 
-/* ===================== MAIN LOOP ===================== */
-let raf = null;
-let master = 0;
+function setRadiatorsOn(rad, on){
+  if(on) rad.root.classList.add('on');
+  else rad.root.classList.remove('on');
+}
 
-function loop(){
+function resetRadiators(rad){
+  setRadiatorsOn(rad,false);
+  for(const b of rad.topBars){ b.style.height='2px'; }
+  for(const b of rad.bottomBars){ b.style.height='2px'; }
+  for(const b of rad.leftBars){ b.style.width='2px'; }
+  for(const b of rad.rightBars){ b.style.width='2px'; }
+
+  rad.topVal.fill(0); rad.botVal.fill(0); rad.leftVal.fill(0); rad.rightVal.fill(0);
+  rad.topPeak.fill(0); rad.botPeak.fill(0); rad.leftPeak.fill(0); rad.rightPeak.fill(0);
+}
+
+function applySideBarsV(bars, valArr, peakArr, scalePx){
+  for(let i=0;i<bars.length;i++){
+    const h = Math.max(2, 2 + peakArr[i]*scalePx);
+    bars[i].style.height = h + 'px';
+  }
+}
+function applySideBarsH(bars, valArr, peakArr, scalePx){
+  for(let i=0;i<bars.length;i++){
+    const w = Math.max(2, 2 + peakArr[i]*scalePx);
+    bars[i].style.width = w + 'px';
+  }
+}
+
+function applySpectrum(rad, freq, gain=1){
+  // Rise fast, fall smooth like a real visualizer
+  const fall = 0.78;          // value decay (faster)
+  const peakFall = 0.92;      // peak decay (slower => peak-hold feel)
+
+  const topN = rad.topBars.length;
+  const sideN = rad.leftBars.length;
+  const total = topN + sideN + topN + sideN;
+
+  // Choose a musically nice band:
+  // skip the first few bins (rumble), avoid ultra-high noise
+  const startBin = 10;
+  const endBin = Math.min(freq.length-1, 640);
+  const band = Math.max(1, endBin - startBin);
+
+  // helper: sample bin index for a given perimeter position [0..total)
+  function binFor(pos){
+    return startBin + Math.floor((pos / total) * band);
+  }
+
+  // Update top
+  for(let i=0;i<topN;i++){
+    const v = freq[binFor(i)] / 255;
+    const s = (v*v) * gain;                   // squared for nicer dynamics
+    rad.topVal[i] = Math.max(s, rad.topVal[i]*fall);
+    rad.topPeak[i] = Math.max(rad.topVal[i], rad.topPeak[i]*peakFall);
+  }
+  // Update right
+  for(let i=0;i<sideN;i++){
+    const v = freq[binFor(topN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.rightVal[i] = Math.max(s, rad.rightVal[i]*fall);
+    rad.rightPeak[i] = Math.max(rad.rightVal[i], rad.rightPeak[i]*peakFall);
+  }
+  // Update bottom
+  for(let i=0;i<topN;i++){
+    const v = freq[binFor(topN + sideN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.botVal[i] = Math.max(s, rad.botVal[i]*fall);
+    rad.botPeak[i] = Math.max(rad.botVal[i], rad.botPeak[i]*peakFall);
+  }
+  // Update left
+  for(let i=0;i<sideN;i++){
+    const v = freq[binFor(topN + sideN + topN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.leftVal[i] = Math.max(s, rad.leftVal[i]*fall);
+    rad.leftPeak[i] = Math.max(rad.leftVal[i], rad.leftPeak[i]*peakFall);
+  }
+
+  // px scale: keep it crisp & not too huge
+  const vScale = 54;
+  const hScale = 54;
+
+  applySideBarsV(rad.topBars, rad.topVal, rad.topPeak, vScale);
+  applySideBarsV(rad.bottomBars, rad.botVal, rad.botPeak, vScale);
+  applySideBarsH(rad.leftBars, rad.leftVal, rad.leftPeak, hScale);
+  applySideBarsH(rad.rightBars, rad.rightVal, rad.rightPeak, hScale);
+}
+
+function visualLoop(){
   const playing = analyser && currentAudioEl && !currentAudioEl.paused;
 
-  // envelope smoothing similar to glow
-  let target = 0;
-  if(playing) target = getEnergy();
+  if(!playing){
+    resetRadiators(yesRad);
+    resetRadiators(noRad);
+    resetRadiators(overlayRad);
+    visRAF = requestAnimationFrame(visualLoop);
+    return;
+  }
 
-  // smoother master (extra)
-  master = master * 0.84 + target * 0.16;
+  analyser.getByteFrequencyData(dataArr);
 
-  // your glow stays (works great already)
-  const glow = Math.round(22 + master * 110);
-  questionEl.style.textShadow = `0 0 ${glow}px #00fff0`;
+  setRadiatorsOn(yesRad,true);
+  setRadiatorsOn(noRad,true);
+  setRadiatorsOn(overlayRad,true);
 
-  // render bars only when audio is actually running
-  const show = playing ? master : 0;
-  radOverlay.render(show);
-  radYes.render(show);
-  radNo.render(show);
+  // Feel-intent bias per scene (still using real bins)
+  const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
+  const ovGain  = 1.0;
 
-  raf = requestAnimationFrame(loop);
+  applySpectrum(yesRad, dataArr, yesGain);
+  applySpectrum(noRad, dataArr, noGain);
+  applySpectrum(overlayRad, dataArr, ovGain);
+
+  // subtle question breathing based on a mid bin
+  const midBin = Math.min(110, dataArr.length-1);
+  const v = dataArr[midBin]/255;
+  const qGlow = Math.round(25 + (v*v)*85);
+  questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
+
+  visRAF = requestAnimationFrame(visualLoop);
 }
+/* ========================================================== */
 
-/* ===================== DODGE: NO stays red + moves (test) ===================== */
-let noWrapFixed = false;
-document.addEventListener('mousemove', (e) => {
-  const r = noWrap.getBoundingClientRect();
-  if(Math.hypot(e.clientX - r.left, e.clientY - r.top) < 120){
+/* YES FLOW */
+function showYes(){
+  clearTimeout(logoutTimer);
+  mainUI.classList.add('hidden');
+  noModal.classList.remove('active');
+  document.body.classList.remove('crt','blur');
+  glass.innerHTML='';
+  heartbeat.pause();
+  questionSound.pause();
+  happySound.currentTime = 0;
+  setActiveAudio(happySound);
+  happySound.play();
+  transition.classList.add('active');
+}
+yes.onclick=showYes;
+apology.onclick=showYes;
 
-    if(!noWrapFixed){
-      noWrapFixed = true;
-      const rr = noWrap.getBoundingClientRect();
-      noWrap.style.position = 'fixed';
-      noWrap.style.left = rr.left + 'px';
-      noWrap.style.top  = rr.top + 'px';
-      noWrap.style.margin = '0';
-    }
+/* GO BACK */
+back.onclick=()=>{
+  transition.classList.remove('active');
+  mainUI.classList.remove('hidden');
+  happySound.pause();
+  happySound.currentTime = 0;
 
-    const w = noWrap.offsetWidth;
-    const h = noWrap.offsetHeight;
-    const maxX = Math.max(0, innerWidth - w - 10);
-    const maxY = Math.max(0, innerHeight - h - 10);
+  setActiveAudio(questionSound);
+  questionSound.play().catch(()=>{});
+};
 
-    noWrap.style.left = (Math.random() * maxX) + 'px';
-    noWrap.style.top  = (Math.random() * maxY) + 'px';
+/* NO DODGE */
+document.addEventListener('mousemove',e=>{
+  const r=no.getBoundingClientRect();
+  if(Math.hypot(e.clientX-r.left,e.clientY-r.top)<120){
+    no.style.left=Math.random()*(innerWidth-120)+'px';
+    no.style.top=Math.random()*(innerHeight-60)+'px';
   }
 });
 
-/* ===================== OVERLAY STEPS + AUDIO ===================== */
+/* NO CLICK */
+no.onclick=e=>{
+  document.body.classList.add('crt');
+  noModal.classList.add('active');
+  heartbeat.currentTime = 0;
+  questionSound.pause();
+  setActiveAudio(heartbeat);
+  heartbeat.play();
+  crackFromCenter(e.clientX,e.clientY);
+
+  logoutTimer=setTimeout(()=>{
+    fullShatter();
+    setActiveAudio(glassSound);
+    glassSound.play();
+    polygonShardFall(innerWidth/2,innerHeight/2);
+    setTimeout(()=>{
+      document.body.classList.add('blur');
+      location.href='/private-site/';
+    },1600);
+  },10000);
+};
+
+// === CRACKS ===
+function crackSeed(x, y) {
+  for (let i = 0; i < 6; i++) {
+    let path = `M ${x} ${y}`;
+    let angle = Math.random() * Math.PI * 2;
+    let cx = x, cy = y;
+    for (let j = 0; j < 8; j++) {
+      angle += (Math.random() - 0.5) * 1;
+      const len = 50 + Math.random() * 50;
+      cx += Math.cos(angle) * len;
+      cy += Math.sin(angle) * len;
+      path += ` L ${cx} ${cy}`;
+    }
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', path);
+    p.setAttribute('stroke', '#00fff0');
+    p.setAttribute('stroke-width', '5');
+    p.setAttribute('fill', 'none');
+    p.style.filter = 'drop-shadow(0 0 25px #00fff0) drop-shadow(0 0 15px #00fff0)';
+    glass.appendChild(p);
+  }
+}
+
+function crackGrowth() {
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+  crackSeed(centerX, centerY);
+}
+
+growthInterval = setInterval(crackGrowth, 1000);
+
+/* SHARDS */
+function polygonShardFall(centerX, centerY){
+  const shardCount = 90;
+  for(let i=0;i<shardCount;i++){
+    const f = document.createElement('div');
+    f.classList.add('fragment');
+
+    const shapes = [
+      'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+      'polygon(0 0, 100% 10%, 90% 100%, 10% 90%)',
+      'polygon(0 10%, 100% 0, 90% 100%, 0 90%)',
+      'polygon(10% 0, 100% 0, 90% 100%, 0 90%)'
+    ];
+    f.style.clipPath = shapes[Math.floor(Math.random()*shapes.length)];
+
+    const size = 15 + Math.random()*25;
+    f.style.width = size + 'px';
+    f.style.height = size + 'px';
+
+    f.style.background = '#00fff0';
+    f.style.boxShadow = '0 0 20px #00fff0, 0 0 40px #00fff0';
+
+    f.style.left = centerX + 'px';
+    f.style.top = centerY + 'px';
+
+    const dx = (Math.random() - 0.5) * window.innerWidth * (0.8 + Math.random()*0.5);
+    const dy = (Math.random() - 0.5) * window.innerHeight * (0.8 + Math.random()*0.5);
+    const rot = Math.random()*720-360;
+
+    f.animate(
+      [
+        {transform: 'translate(0,0) rotate(0deg)', opacity:1},
+        {transform: `translate(${dx}px,${dy}px) rotate(${rot}deg)`, opacity:0}
+      ],
+      {duration:1400 + Math.random()*400, easing:'cubic-bezier(.22,.61,.36,1)', fill:'forwards'}
+    );
+
+    document.body.appendChild(f);
+    setTimeout(()=>f.remove(),2000);
+  }
+}
+
+/* SVG ANIM */
+const style=document.createElement('style');
+style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
+document.head.appendChild(style);
+
+/* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
+
+// Block YES/NO until audio is unlocked
+yes.style.pointerEvents = 'none';
+no.style.pointerEvents = 'none';
+
 let overlayStep = 1;
 let audioPrimed = false;
 
@@ -587,6 +727,8 @@ function setOverlayStep(step){
   if(step===3) tapOverlayText.textContent = "Enter at your own risk.";
 }
 
+setOverlayStep(1);
+
 function primeAudio(a){
   const prevMuted = a.muted;
   a.muted = true;
@@ -596,7 +738,9 @@ function primeAudio(a){
       a.pause();
       try{ a.currentTime = 0; }catch(e){}
       a.muted = prevMuted;
-    }).catch(()=>{ a.muted = prevMuted; });
+    }).catch(()=>{
+      a.muted = prevMuted;
+    });
   }else{
     a.pause();
     try{ a.currentTime = 0; }catch(e){}
@@ -604,65 +748,39 @@ function primeAudio(a){
   }
 }
 
-setOverlayStep(1);
-
-async function handleOverlayClick(){
-  ensureAudio();
+async function unlockAndStartQuestion(){
+  ensureAudioVisuals();
   try{ await audioCtx.resume(); }catch(e){}
 
-  if(!raf) loop();
+  if(!visRAF) visualLoop();
 
-  // Start question audio at first click (and keep playing through overlay)
-  if(!currentAudioEl){
+  try{
     setActiveAudio(questionSound);
-    try{ await questionSound.play(); } catch(e){ return; }
-
-    // prime other audio so first YES/NO click doesn't lag
-    if(!audioPrimed){
-      audioPrimed = true;
-      primeAudio(happySound);
-      primeAudio(heartbeat);
-    }
+    await questionSound.play();
+  }catch(e){
+    return;
   }
 
-  // Must click EACH overlay
+  if(!audioPrimed){
+    audioPrimed = true;
+    primeAudio(happySound);
+    primeAudio(heartbeat);
+    primeAudio(glassSound);
+  }
+
   if(overlayStep < 3){
     setOverlayStep(overlayStep + 1);
     return;
   }
 
   tapOverlay.classList.add('hidden');
+  yes.style.pointerEvents = '';
+  no.style.pointerEvents = '';
 }
 
-tapOverlay.addEventListener('pointerdown', handleOverlayClick, { passive:true });
+tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
 
-/* ===================== YES / NO AUDIO SWITCHING (test) ===================== */
-yes.addEventListener('click', async () => {
-  // stop others, play happy
-  questionSound.pause();
-  heartbeat.pause();
-  happySound.currentTime = 0;
-  setActiveAudio(happySound);
-  try{ await happySound.play(); }catch(e){}
-});
-
-no.addEventListener('click', async () => {
-  // stop others, play heartbeat
-  questionSound.pause();
-  happySound.pause();
-  heartbeat.currentTime = 0;
-  setActiveAudio(heartbeat);
-  try{ await heartbeat.play(); }catch(e){}
-});
-
-// Right click anywhere = "back" to question (quick test convenience)
-document.addEventListener('contextmenu', async (e) => {
-  e.preventDefault();
-  happySound.pause();
-  heartbeat.pause();
-  setActiveAudio(questionSound);
-  try{ await questionSound.play(); }catch(err){}
-});
 </script>
+
 </body>
 </html>
