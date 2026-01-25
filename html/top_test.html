@@ -201,7 +201,7 @@ function drawTopBars(master){
   const w  = r.width;
 
   // bar density: fine but not a blob
-  const spacing = 7; // px along edge
+  const spacing = 3.5; // px along edge
   const count = Math.max(22, Math.floor(w / spacing));
   if(count !== barCount) rebuildBars(count);
 
