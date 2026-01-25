@@ -546,7 +546,18 @@ function applySpectrum(rad, freq, gain=1){
 
 function visualLoop(){
   const playing = analyser && currentAudioEl && !currentAudioEl.paused;
-  const overlayActive = !tapOverlay.classList.contains('hidden');
+
+  // What screen are we on?
+  const overlayActive = !tapOverlay.classList.contains('hidden');         // the 3-step entry overlay
+  const questionActive = !mainUI.classList.contains('hidden');            // the question UI (YES/NO visible)
+  const noModalActive = noModal.classList.contains('active');             // NO modal popup
+  const transitionActive = transition.classList.contains('active');       // YES transition screen
+
+  // ✅ YES/NO bars ONLY on the question screen (not overlay, not modal, not transition)
+  const showYesNo = playing && questionActive && !overlayActive && !noModalActive && !transitionActive;
+
+  // ✅ Overlay bars ONLY while overlay is visible
+  const showOverlay = playing && overlayActive;
 
   if(!playing){
     resetRadiators(yesRad);
@@ -563,25 +574,30 @@ function visualLoop(){
   const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
   const ovGain  = 1.0;
 
-  // Question screen → YES / NO bars only
-  if(!overlayActive){
+  // ----- YES/NO -----
+  if(showYesNo){
     setRadiatorsOn(yesRad, true);
     setRadiatorsOn(noRad, true);
-    setRadiatorsOn(overlayRad, false);
 
     applySpectrum(yesRad, dataArr, yesGain);
     applySpectrum(noRad, dataArr, noGain);
-  }
-  // Overlay screen → overlay pill bars only
-  else{
+  }else{
     setRadiatorsOn(yesRad, false);
     setRadiatorsOn(noRad, false);
-    setRadiatorsOn(overlayRad, true);
-
-    applySpectrum(overlayRad, dataArr, ovGain);
+    resetRadiators(yesRad);
+    resetRadiators(noRad);
   }
 
-  // subtle question breathing based on a mid bin (keep as-is)
+  // ----- Overlay pill -----
+  if(showOverlay){
+    setRadiatorsOn(overlayRad, true);
+    applySpectrum(overlayRad, dataArr, ovGain);
+  }else{
+    setRadiatorsOn(overlayRad, false);
+    resetRadiators(overlayRad);
+  }
+
+  // subtle question breathing based on a mid bin
   const midBin = Math.min(110, dataArr.length-1);
   const v = dataArr[midBin]/255;
   const qGlow = Math.round(25 + (v*v)*85);
