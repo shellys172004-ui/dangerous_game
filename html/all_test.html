@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ALL Radiator Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    height:100vh; overflow:hidden;
+    font-family:'Orbitron',sans-serif;
+    background:radial-gradient(circle at top,#0e1a2f,#05070c);
+    color:#00fff0;
+  }
+
+  .background{
+    position:fixed;inset:0;
+    background:
+      repeating-linear-gradient(0deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px),
+      repeating-linear-gradient(90deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px);
+    animation:grid 12s linear infinite;
+    z-index:0;
+  }
+  @keyframes grid{to{background-position:0 36px,36px 0}}
+
+  .ui{
+    position:relative; z-index:2;
+    height:100%;
+    display:flex; flex-direction:column;
+    justify-content:center; align-items:center;
+    gap:18px;
+  }
+
+  h2{
+    font-size:2.3rem;
+    text-shadow:0 0 25px #00fff0;
+    animation:floatQ 3s ease-in-out infinite;
+  }
+  @keyframes floatQ{50%{transform:translateY(-10px)}}
+
+  .wrap{
+    position:relative;
+    display:inline-block;
+  }
+
+  button{
+    padding:16px 56px;
+    font-family:'Orbitron';
+    font-size:1.05rem;
+    border-radius:18px;
+    border:none;
+    cursor:pointer;
+    background:linear-gradient(135deg,#00fff0,#00b3ff);
+    color:#000;
+    box-shadow:0 0 40px rgba(0,255,240,.35);
+  }
+
+  .tapOverlay{
+    position:fixed; inset:0;
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    z-index:999;
+    cursor:pointer;
+  }
+  .tapOverlay.hidden{display:none}
+  .tapOverlay span{
+    padding:14px 18px;
+    border:1px solid #00fff0;
+    box-shadow:0 0 30px rgba(0,255,240,.55);
+    border-radius:18px;
+    text-shadow:0 0 18px #00fff0;
+    color:#00fff0;
+    background:rgba(0,0,0,.15);
+  }
+
+  canvas{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:3;
+  }
+
+  .hint{opacity:.7;font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="background"></div>
+
+<div class="ui">
+  <h2 id="q">Will you be my valentine?</h2>
+  <div class="wrap" id="pillWrap">
+    <button id="pillBtn">YOU CAN STILL TURN BACK</button>
+  </div>
+  <div class="hint">ALL-sides test (watch corners)</div>
+</div>
+
+<div class="tapOverlay" id="tap">
+  <span>Click to start audio + bars</span>
+</div>
+
+<audio id="questionSound" src="question.mp3" loop></audio>
+<canvas id="c"></canvas>
+
+<script>
+const qEl = document.getElementById('q');
+const wrap = document.getElementById('pillWrap');
+const btn  = document.getElementById('pillBtn');
+const tap  = document.getElementById('tap');
+const audioEl = document.getElementById('questionSound');
+audioEl.volume = 0.6;
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+function resize(){
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize', resize);
+resize();
+
+/* ===================== AUDIO ===================== */
+let audioCtx, analyser, dataArr, srcNode;
+function ensureAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  dataArr = new Uint8Array(analyser.frequencyBinCount);
+
+  srcNode = audioCtx.createMediaElementSource(audioEl);
+  srcNode.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+function energy(){
+  analyser.getByteFrequencyData(dataArr);
+  let sum=0,n=0;
+  for(let i=18;i<=220;i++){ sum+=dataArr[i]; n++; }
+  let v=(sum/n)/255;
+  return v*v;
+}
+
+/* ===================== HISTORY (FOR VISIBLE DELAYS) ===================== */
+const HIST=220;
+const hist=new Float32Array(HIST);
+let hPos=0;
+function push(v){ hist[hPos]=v; hPos=(hPos+1)%HIST; }
+function get(delayFrames){
+  let i=hPos-1-delayFrames;
+  while(i<0) i+=HIST;
+  return hist[i%HIST];
+}
+
+/* ===================== PER-BAR STATE ===================== */
+let topL=[], botL=[], leftL=[], rightL=[];
+let topN=0, sideN=0;
+
+function rebuild(topCount, sideCount){
+  topN = topCount;
+  sideN = sideCount;
+  topL = new Array(topN).fill(0);
+  botL = new Array(topN).fill(0);
+  leftL = new Array(sideN).fill(0);
+  rightL = new Array(sideN).fill(0);
+}
+
+function noise(i, salt){
+  // deterministic 0..1
+  const x = Math.sin((i+salt) * 127.1) * 43758.5453123;
+  return x - Math.floor(x);
+}
+
+function edgeWeight(t){
+  // strongest near middle
+  return 0.25 + 0.75*Math.sin(Math.PI*t);
+}
+
+function smoothBar(arr, i, target){
+  const cur = arr[i];
+  // attack fast, decay slower (keeps it alive but not jittery)
+  const next = (target > cur)
+    ? cur + (target-cur)*0.55
+    : cur + (target-cur)*0.18;
+  arr[i] = next;
+  return next;
+}
+
+/* ===================== DRAW ALL SIDES ===================== */
+function drawAll(master){
+  const r = wrap.getBoundingClientRect();
+
+  // density: "2 in the place of 1"
+  const spacing = 3.5;
+
+  // read actual border radius (rounded corners)
+  const br = parseFloat(getComputedStyle(btn).borderRadius) || 18;
+
+  // keep bars off the curved corner area so they look attached, not messy
+  const cornerPad = br + 2; // stop bars before the rounded corner starts
+
+  const usableW = Math.max(10, r.width - cornerPad*2);
+  const usableH = Math.max(10, r.height - cornerPad*2);
+
+  const newTopN  = Math.max(32, Math.floor(usableW / spacing));
+  const newSideN = Math.max(22, Math.floor(usableH / spacing));
+
+  if(newTopN !== topN || newSideN !== sideN) rebuild(newTopN, newSideN);
+
+  // styling
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#00fff0';
+  ctx.shadowColor = '#00fff0';
+  ctx.shadowBlur = 10;
+
+  const minLen = 2.5;
+  const maxLen = 46; // exaggerated like you wanted
+
+  // TOP (emit upward)
+  {
+    const center = (topN-1)/2;
+    const y = r.top;
+    for(let i=0;i<topN;i++){
+      const t = i/(topN-1);
+      const x = r.left + cornerPad + t*usableW;
+
+      const dist = Math.abs(i-center);
+      const delay = Math.min(160, Math.floor(dist)*6);
+      const e = get(delay);
+
+      const w = edgeWeight(t);
+      const n = (noise(i, 11)-0.5)*0.18;
+      const target = Math.max(0, Math.min(1, e+n));
+
+      const lvl = smoothBar(topL, i, target);
+      const L = minLen + lvl*w*maxLen;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y - L);
+      ctx.stroke();
+    }
+  }
+
+  // BOTTOM (emit downward)
+  {
+    const center = (topN-1)/2;
+    const y = r.top + r.height;
+    for(let i=0;i<topN;i++){
+      const t = i/(topN-1);
+      const x = r.left + cornerPad + t*usableW;
+
+      const dist = Math.abs(i-center);
+      const delay = Math.min(160, Math.floor(dist)*6);
+      const e = get(delay);
+
+      const w = edgeWeight(t);
+      const n = (noise(i, 29)-0.5)*0.18;
+      const target = Math.max(0, Math.min(1, e+n));
+
+      const lvl = smoothBar(botL, i, target);
+      const L = minLen + lvl*w*maxLen;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + L);
+      ctx.stroke();
+    }
+  }
+
+  // LEFT (emit left)
+  {
+    const center = (sideN-1)/2;
+    const x = r.left;
+    for(let i=0;i<sideN;i++){
+      const t = i/(sideN-1);
+      const y = r.top + cornerPad + t*usableH;
+
+      const dist = Math.abs(i-center);
+      const delay = Math.min(160, Math.floor(dist)*6);
+      const e = get(delay);
+
+      const w = edgeWeight(t);
+      const n = (noise(i, 47)-0.5)*0.18;
+      const target = Math.max(0, Math.min(1, e+n));
+
+      const lvl = smoothBar(leftL, i, target);
+      const L = minLen + lvl*w*maxLen;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - L, y);
+      ctx.stroke();
+    }
+  }
+
+  // RIGHT (emit right)
+  {
+    const center = (sideN-1)/2;
+    const x = r.left + r.width;
+    for(let i=0;i<sideN;i++){
+      const t = i/(sideN-1);
+      const y = r.top + cornerPad + t*usableH;
+
+      const dist = Math.abs(i-center);
+      const delay = Math.min(160, Math.floor(dist)*6);
+      const e = get(delay);
+
+      const w = edgeWeight(t);
+      const n = (noise(i, 83)-0.5)*0.18;
+      const target = Math.max(0, Math.min(1, e+n));
+
+      const lvl = smoothBar(rightL, i, target);
+      const L = minLen + lvl*w*maxLen;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + L, y);
+      ctx.stroke();
+    }
+  }
+
+  /* ===================== CORNERS (what you wanted to inspect) =====================
+     Minimal corner continuity:
+     - Since we stop edge bars before the rounded corner, corners can look "empty".
+     - To connect the feel, we emit ONE diagonal bar from each corner.
+     - Driven by the slowest group (outermost), so corners lag nicely.
+     If you want NO diagonal corner bars: delete this block.
+  */
+  {
+    const outerGroupDelay = Math.min(180, Math.floor(Math.max(topN, sideN)/2) * 6);
+    const eCorner = get(outerGroupDelay);
+
+    const cornerLvl = Math.max(0, Math.min(1, eCorner));
+    const cornerLen = 2 + cornerLvl * 26;
+
+    ctx.shadowBlur = 10;
+
+    // TL
+    ctx.beginPath();
+    ctx.moveTo(r.left, r.top);
+    ctx.lineTo(r.left - cornerLen, r.top - cornerLen);
+    ctx.stroke();
+
+    // TR
+    ctx.beginPath();
+    ctx.moveTo(r.left + r.width, r.top);
+    ctx.lineTo(r.left + r.width + cornerLen, r.top - cornerLen);
+    ctx.stroke();
+
+    // BL
+    ctx.beginPath();
+    ctx.moveTo(r.left, r.top + r.height);
+    ctx.lineTo(r.left - cornerLen, r.top + r.height + cornerLen);
+    ctx.stroke();
+
+    // BR
+    ctx.beginPath();
+    ctx.moveTo(r.left + r.width, r.top + r.height);
+    ctx.lineTo(r.left + r.width + cornerLen, r.top + r.height + cornerLen);
+    ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+}
+
+/* ===================== LOOP ===================== */
+let raf = null;
+let master = 0;
+
+function loop(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  let e=0;
+  if(!audioEl.paused) e = energy();
+
+  // glow smoothing
+  master = master*0.86 + e*0.14;
+
+  // history uses less-smoothed e so delays stay visible
+  push(e);
+
+  // text glow (same vibe)
+  const glow = Math.round(22 + master*110);
+  qEl.style.textShadow = `0 0 ${glow}px #00fff0`;
+
+  if(!audioEl.paused) drawAll(master);
+
+  raf = requestAnimationFrame(loop);
+}
+
+/* ===================== START ===================== */
+tap.addEventListener('pointerdown', async () => {
+  ensureAudio();
+  try{ await audioCtx.resume(); }catch(e){}
+  try{ await audioEl.play(); }catch(e){ return; }
+
+  tap.classList.add('hidden');
+  if(!raf) loop();
+}, {passive:true});
+</script>
+</body>
+</html>
