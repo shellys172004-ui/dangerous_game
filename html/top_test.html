@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TOP Radiator Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    height:100vh; overflow:hidden;
+    font-family:'Orbitron',sans-serif;
+    background:radial-gradient(circle at top,#0e1a2f,#05070c);
+    color:#00fff0;
+  }
+  .background{
+    position:fixed;inset:0;
+    background:
+      repeating-linear-gradient(0deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px),
+      repeating-linear-gradient(90deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px);
+    animation:grid 12s linear infinite;
+    z-index:0;
+  }
+  @keyframes grid{to{background-position:0 36px,36px 0}}
+
+  .ui{
+    position:relative; z-index:2;
+    height:100%;
+    display:flex; flex-direction:column;
+    justify-content:center; align-items:center;
+    gap:18px;
+  }
+
+  h2{
+    font-size:2.3rem;
+    text-shadow:0 0 25px #00fff0;
+    animation:floatQ 3s ease-in-out infinite;
+  }
+  @keyframes floatQ{50%{transform:translateY(-10px)}}
+
+  .wrap{
+    position:relative;
+    display:inline-block;
+  }
+
+  button{
+    padding:16px 56px;
+    font-family:'Orbitron';
+    font-size:1.05rem;
+    border-radius:18px;
+    border:none;
+    cursor:pointer;
+    background:linear-gradient(135deg,#00fff0,#00b3ff);
+    color:#000;
+    box-shadow:0 0 40px rgba(0,255,240,.35);
+  }
+
+  .tapOverlay{
+    position:fixed; inset:0;
+    background:#000;
+    display:flex; align-items:center; justify-content:center;
+    z-index:999;
+    cursor:pointer;
+  }
+  .tapOverlay.hidden{display:none}
+  .tapOverlay span{
+    padding:14px 18px;
+    border:1px solid #00fff0;
+    box-shadow:0 0 30px rgba(0,255,240,.55);
+    border-radius:18px;
+    text-shadow:0 0 18px #00fff0;
+    color:#00fff0;
+    background:rgba(0,0,0,.15);
+  }
+
+  canvas{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:3;
+  }
+
+  .hint{
+    opacity:.7;
+    font-size:.9rem;
+  }
+</style>
+</head>
+<body>
+<div class="background"></div>
+
+<div class="ui">
+  <h2 id="q">Will you be my valentine?</h2>
+
+  <div class="wrap" id="pillWrap">
+    <button id="pillBtn">YOU CAN STILL TURN BACK</button>
+  </div>
+
+  <div class="hint">TOP-only test (bars should feel like they “grow out” of the top edge)</div>
+</div>
+
+<div class="tapOverlay" id="tap">
+  <span>Click to start audio + bars</span>
+</div>
+
+<audio id="questionSound" src="question.mp3" loop></audio>
+
+<canvas id="c"></canvas>
+
+<script>
+const qEl = document.getElementById('q');
+const wrap = document.getElementById('pillWrap');
+const btn  = document.getElementById('pillBtn');
+const tap  = document.getElementById('tap');
+const audioEl = document.getElementById('questionSound');
+
+audioEl.volume = 0.6;
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+function resize(){
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  canvas.style.width = innerWidth + 'px';
+  canvas.style.height = innerHeight + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize', resize);
+resize();
+
+/* ===================== AUDIO ANALYSER ===================== */
+let audioCtx=null, analyser=null, dataArr=null, source=null;
+
+function ensureAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  dataArr = new Uint8Array(analyser.frequencyBinCount);
+
+  // connect audio element -> analyser -> output
+  source = audioCtx.createMediaElementSource(audioEl);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+
+function energy(){
+  analyser.getByteFrequencyData(dataArr);
+  // midband average (same vibe as your glow)
+  const start = 18;
+  const end = Math.min(dataArr.length-1, 220);
+  let sum=0, n=0;
+  for(let i=start;i<=end;i++){ sum += dataArr[i]; n++; }
+  let v = (sum/n)/255; // 0..1
+  v = v*v;             // curve like glow
+  return v;
+}
+
+/* ===================== TOP RADIATOR LOGIC ===================== */
+/*
+  Key: delay MUST be spatial + mirror-symmetric.
+  We implement this with a history buffer:
+  - history[t] = energy at frame t
+  - bar group g uses energy from t - delayFrames(g)
+  This guarantees visible lag without everything syncing.
+*/
+const HISTORY = 180;
+const hist = new Float32Array(HISTORY);
+let histPos = 0;
+
+function pushHist(v){
+  hist[histPos] = v;
+  histPos = (histPos + 1) % HISTORY;
+}
+function getHist(delayFrames){
+  let idx = histPos - 1 - delayFrames;
+  while(idx < 0) idx += HISTORY;
+  return hist[idx % HISTORY];
+}
+
+// per-bar smoothing state (to avoid jitter while keeping delays visible)
+let barLevels = [];
+let barCount = 0;
+
+function rebuildBars(count){
+  barCount = count;
+  barLevels = new Array(barCount).fill(0);
+}
+
+function hashNoise(i){
+  // deterministic 0..1
+  const x = Math.sin(i * 127.1) * 43758.5453123;
+  return x - Math.floor(x);
+}
+
+function drawTopBars(master){
+  const r = wrap.getBoundingClientRect();
+  const x0 = r.left;
+  const y0 = r.top;
+  const w  = r.width;
+
+  // bar density: fine but not a blob
+  const spacing = 7; // px along edge
+  const count = Math.max(22, Math.floor(w / spacing));
+  if(count !== barCount) rebuildBars(count);
+
+  // TOP edge base line: attach directly to element edge
+  const baseY = y0; // top edge EXACT
+  const insetX = 6; // keep away from rounded corners a bit
+  const usableW = Math.max(10, w - insetX*2);
+
+  // mirror-symmetric groups by distance from center
+  const center = (barCount - 1) / 2;
+
+  // lengths
+  const minLen = 2.5;
+  const maxLen = 46; // exaggerated, per your note
+
+  // style
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#00fff0';
+  ctx.shadowColor = '#00fff0';
+  ctx.shadowBlur = 10;
+
+  for(let i=0;i<barCount;i++){
+    const t = i/(barCount-1);
+    const x = x0 + insetX + t*usableW;
+
+    // distance-from-center (mirror symmetry)
+    const dist = Math.abs(i - center);
+    const group = Math.floor(dist);
+
+    // BIG visible delay increase as you move outward
+    // (this is intentionally strong so you can SEE it)
+    const delayFrames = Math.min(120, group * 6);
+
+    // sample older energy for this group
+    const eDelayed = getHist(delayFrames);
+
+    // edge weighting: strongest near center, weaker near ends
+    const edgeW = 0.25 + 0.75 * Math.sin(Math.PI * t);
+
+    // tiny per-bar variation so it feels alive but still grouped
+    const n = (hashNoise(i) - 0.5) * 0.18; // -0.09..+0.09
+    const e = Math.max(0, Math.min(1, eDelayed + n));
+
+    // smooth per bar (attack fast, decay slower)
+    const cur = barLevels[i];
+    let next;
+    if(e > cur) next = cur + (e - cur) * 0.55;
+    else        next = cur + (e - cur) * 0.18;
+    barLevels[i] = next;
+
+    const L = minLen + (barLevels[i] * edgeW * maxLen);
+
+    // draw upward from the edge (emanating)
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x, baseY - L);
+    ctx.stroke();
+  }
+
+  // optional: make the edge itself subtly “hot”
+  // (kept very light; bars should be the star)
+  ctx.shadowBlur = 0;
+}
+
+/* ===================== MAIN LOOP ===================== */
+let raf = null;
+let master = 0;
+
+function loop(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  const playing = analyser && !audioEl.paused;
+  let e = 0;
+  if(playing) e = energy();
+
+  // master smoothing for text glow only
+  master = master*0.86 + e*0.14;
+
+  // push raw-ish energy into history (so delays stay meaningful)
+  pushHist(e);
+
+  // text glow (your “perfect” vibe)
+  const glow = Math.round(22 + master * 110);
+  qEl.style.textShadow = `0 0 ${glow}px #00fff0`;
+
+  // bars only when audio actually playing
+  if(playing){
+    drawTopBars(master);
+  }
+
+  raf = requestAnimationFrame(loop);
+}
+
+/* ===================== START ===================== */
+tap.addEventListener('pointerdown', async () => {
+  ensureAudio();
+  try{ await audioCtx.resume(); }catch(e){}
+
+  try{
+    await audioEl.play();
+  }catch(e){
+    return;
+  }
+
+  tap.classList.add('hidden');
+  if(!raf) loop();
+}, {passive:true});
+</script>
+</body>
+</html>
