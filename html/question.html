@@ -310,10 +310,10 @@ body.blur{
   <span id="tapOverlayText">Click if you really want to enter.</span>
 </div>
 
-<audio id="heartbeat" src="heartbeat.mp3" loop></audio>
-<audio id="glassSound" src="glass.mp3"></audio>
-<audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
-<audio id="questionSound" src="question.mp3" loop></audio>
+<audio id="heartbeat" src="heartbeat.mp3" loop preload="auto"></audio>
+<audio id="glassSound" src="glass.mp3" preload="auto"></audio>
+<audio id="happySound" src="happy_happy_happy_cat.mp3" preload="auto"></audio>
+<audio id="questionSound" src="question.mp3" loop preload="auto"></audio>
 
 <canvas id="radiatorCanvas"></canvas>
 
@@ -998,6 +998,8 @@ async function unlockAndStartQuestion(){
     setActiveAudio(questionSound);
     await questionSound.play();
   }catch(e){
+    // allow retry on next tap if autoplay is blocked
+    overlayGestureHandled=false;
     return;
   }
 
@@ -1018,7 +1020,15 @@ async function unlockAndStartQuestion(){
   no.style.pointerEvents = '';
 }
 
-tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
+let overlayGestureHandled=false;
+function overlayGesture(e){
+  if(overlayGestureHandled) return;
+  overlayGestureHandled=true;
+  unlockAndStartQuestion();
+}
+
+tapOverlay.addEventListener('pointerdown', overlayGesture, { once:false });
+tapOverlay.addEventListener('click', overlayGesture, { once:false });
 
 </script>
 
