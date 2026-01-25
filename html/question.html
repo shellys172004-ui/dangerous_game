@@ -546,6 +546,7 @@ function applySpectrum(rad, freq, gain=1){
 
 function visualLoop(){
   const playing = analyser && currentAudioEl && !currentAudioEl.paused;
+  const overlayActive = !tapOverlay.classList.contains('hidden');
 
   if(!playing){
     resetRadiators(yesRad);
@@ -557,20 +558,30 @@ function visualLoop(){
 
   analyser.getByteFrequencyData(dataArr);
 
-  setRadiatorsOn(yesRad,true);
-  setRadiatorsOn(noRad,true);
-  setRadiatorsOn(overlayRad,true);
-
   // Feel-intent bias per scene (still using real bins)
   const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
   const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
   const ovGain  = 1.0;
 
-  applySpectrum(yesRad, dataArr, yesGain);
-  applySpectrum(noRad, dataArr, noGain);
-  applySpectrum(overlayRad, dataArr, ovGain);
+  // Question screen → YES / NO bars only
+  if(!overlayActive){
+    setRadiatorsOn(yesRad, true);
+    setRadiatorsOn(noRad, true);
+    setRadiatorsOn(overlayRad, false);
 
-  // subtle question breathing based on a mid bin
+    applySpectrum(yesRad, dataArr, yesGain);
+    applySpectrum(noRad, dataArr, noGain);
+  }
+  // Overlay screen → overlay pill bars only
+  else{
+    setRadiatorsOn(yesRad, false);
+    setRadiatorsOn(noRad, false);
+    setRadiatorsOn(overlayRad, true);
+
+    applySpectrum(overlayRad, dataArr, ovGain);
+  }
+
+  // subtle question breathing based on a mid bin (keep as-is)
   const midBin = Math.min(110, dataArr.length-1);
   const v = dataArr[midBin]/255;
   const qGlow = Math.round(25 + (v*v)*85);
