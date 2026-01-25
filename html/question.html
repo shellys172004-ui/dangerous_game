@@ -1053,38 +1053,54 @@ tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:tru
   const ovRad  = new Radiator(()=>getBtnRect(ovEl),  getRadiusFromEl(ovEl),  '#00fff0');
 
   // Main render loop: never touches your click handlers / audio flow
-  function tick(){
-    // if overlay isn't created yet (or elements missing), keep trying
-    yesRad.build();
-    noRad.build();
-    ovRad.build();
+function tick(){
+  // rebuild points if layout moved
+  yesRad.build();
+  noRad.build();
+  ovRad.build();
 
-    ctx.clearRect(0,0,innerWidth,innerHeight);
+  // always clear canvas first (prevents "stuck frame")
+  ctx.clearRect(0,0,innerWidth,innerHeight);
 
-    // Use your existing analyser+dataArr+currentAudioEl if available
-    const hasSpectrum = (typeof analyser !== 'undefined' && analyser && typeof dataArr !== 'undefined' && dataArr);
-    const isPlaying = (typeof currentAudioEl !== 'undefined' && currentAudioEl && !currentAudioEl.paused);
+  const hasSpectrum = (typeof analyser !== 'undefined' && analyser && typeof dataArr !== 'undefined' && dataArr);
+  const isPlaying = (typeof currentAudioEl !== 'undefined' && currentAudioEl && !currentAudioEl.paused);
 
-    if(hasSpectrum && isPlaying){
-      analyser.getByteFrequencyData(dataArr);
+  // Which screen is active?
+  const overlayActive = !tapOverlay.classList.contains('hidden');        // 3-step entry overlay
+  const questionActive = !mainUI.classList.contains('hidden');           // main question screen
+  const noModalActive = noModal.classList.contains('active');            // NO modal screen
+  const transitionActive = transition.classList.contains('active');      // YES transition screen
 
-      // update radiators
+  // ✅ YES/NO bars ONLY on the real question screen
+  const showYesNo = isPlaying && hasSpectrum && questionActive && !overlayActive && !noModalActive && !transitionActive;
+
+  // ✅ Overlay bars ONLY while overlay is visible
+  const showOverlay = isPlaying && hasSpectrum && overlayActive;
+
+  if(hasSpectrum && isPlaying){
+    analyser.getByteFrequencyData(dataArr);
+
+    // Draw only what should be visible
+    if(showYesNo){
       yesRad.updateFromSpectrum(dataArr);
       noRad.updateFromSpectrum(dataArr);
-      ovRad.updateFromSpectrum(dataArr);
 
-      // draw: slightly different strengths per sound (keeps your vibe)
       const yesGain = (typeof happySound !== 'undefined' && currentAudioEl === happySound) ? 52 : 46;
       const noGain  = (typeof heartbeat !== 'undefined' && currentAudioEl === heartbeat) ? 58 : 42;
-      const ovGain  = 46;
 
       yesRad.draw(yesGain);
       noRad.draw(noGain);
-      ovRad.draw(ovGain);
     }
 
-    requestAnimationFrame(tick);
+    if(showOverlay){
+      ovRad.updateFromSpectrum(dataArr);
+      ovRad.draw(46);
+    }
   }
+
+  requestAnimationFrame(tick);
+}
+
   requestAnimationFrame(tick);
 })();
 /* ======================================================================= */
