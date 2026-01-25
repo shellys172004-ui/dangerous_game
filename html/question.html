@@ -276,9 +276,14 @@ body.blur{
 .rbarH.right{ transform-origin:left; }
 /* ====================================================================== */
 
-
-/* RADIATOR CANVAS (SEAMLESS CORNERS) */
-#radiatorCanvas{position:fixed;inset:0;pointer-events:none;z-index:50}
+/* ===================== AUDIO RADIATOR CANVAS (BARS) ===================== */
+#vizCanvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1001; /* above overlay (999) */
+}
+/* ======================================================================= */
 
 </style>
 </head>
@@ -314,8 +319,6 @@ body.blur{
 <audio id="glassSound" src="glass.mp3"></audio>
 <audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
 <audio id="questionSound" src="question.mp3" loop></audio>
-
-<canvas id="radiatorCanvas"></canvas>
 
 <script>
 /* SPRINKLES */
@@ -379,252 +382,7 @@ function setActiveAudio(el){
   if(currentAudioEl && sources.has(currentAudioEl)){
     try{ sources.get(currentAudioEl).disconnect(); }catch(e){}
   }
-  currentAudioEl = el
-/* ===================== APPROVED CURVED RADIATOR CANVAS ===================== */
-/* This draws the seamless rounded-corner “radiating bars” around elements. */
-const radiatorCanvas = document.getElementById('radiatorCanvas');
-const rctx = radiatorCanvas.getContext('2d', { alpha:true });
-
-function resizeRadiatorCanvas(){
-  const dpr = window.devicePixelRatio || 1;
-  radiatorCanvas.width  = Math.floor(innerWidth * dpr);
-  radiatorCanvas.height = Math.floor(innerHeight * dpr);
-  radiatorCanvas.style.width = innerWidth + 'px';
-  radiatorCanvas.style.height = innerHeight + 'px';
-  rctx.setTransform(dpr,0,0,dpr,0,0);
-}
-resizeRadiatorCanvas();
-addEventListener('resize', resizeRadiatorCanvas);
-
-function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-function firstRadiusPx(el){
-  const cs = getComputedStyle(el);
-  const br = cs.borderRadius || '0px';
-  // take first token (supports "18px 18px ..." etc)
-  const token = br.split(' ')[0];
-  const v = parseFloat(token) || 0;
-  return v;
-}
-
-// Build perimeter points for a rounded-rect (clockwise, starting on top edge)
-function buildRoundedPerimeter(rect, r, spacing){
-  const x=rect.left, y=rect.top, w=rect.width, h=rect.height;
-  const rr = clamp(r, 0, Math.min(w,h)/2);
-  const Ltop = Math.max(0, w - 2*rr);
-  const Lside = Math.max(0, h - 2*rr);
-  const arc = 0.5*Math.PI*rr;
-  const perim = 2*Ltop + 2*Lside + 4*arc;
-  const count = Math.max(160, Math.floor(perim / spacing));
-  const pts = new Array(count);
-
-  for(let i=0;i<count;i++){
-    let d = (i / count) * perim;
-
-    // segments: top -> TR arc -> right -> BR arc -> bottom -> BL arc -> left -> TL arc
-    // 1) top edge (left->right)
-    if(d < Ltop){
-      const px = x + rr + d;
-      const py = y;
-      pts[i] = {x:px, y:py, nx:0, ny:-1};
-      continue;
-    }
-    d -= Ltop;
-
-    // 2) top-right arc
-    if(d < arc){
-      const t = d / arc;                 // 0..1
-      const a = -Math.PI/2 + t*(Math.PI/2);
-      const cx = x + w - rr;
-      const cy = y + rr;
-      const px = cx + Math.cos(a)*rr;
-      const py = cy + Math.sin(a)*rr;
-      const nx = Math.cos(a);
-      const ny = Math.sin(a);
-      pts[i] = {x:px, y:py, nx:nx, ny:ny};
-      continue;
-    }
-    d -= arc;
-
-    // 3) right edge (top->bottom)
-    if(d < Lside){
-      const px = x + w;
-      const py = y + rr + d;
-      pts[i] = {x:px, y:py, nx:1, ny:0};
-      continue;
-    }
-    d -= Lside;
-
-    // 4) bottom-right arc
-    if(d < arc){
-      const t = d / arc;
-      const a = 0 + t*(Math.PI/2);
-      const cx = x + w - rr;
-      const cy = y + h - rr;
-      const px = cx + Math.cos(a)*rr;
-      const py = cy + Math.sin(a)*rr;
-      const nx = Math.cos(a);
-      const ny = Math.sin(a);
-      pts[i] = {x:px, y:py, nx:nx, ny:ny};
-      continue;
-    }
-    d -= arc;
-
-    // 5) bottom edge (right->left)
-    if(d < Ltop){
-      const px = x + w - rr - d;
-      const py = y + h;
-      pts[i] = {x:px, y:py, nx:0, ny:1};
-      continue;
-    }
-    d -= Ltop;
-
-    // 6) bottom-left arc
-    if(d < arc){
-      const t = d / arc;
-      const a = Math.PI/2 + t*(Math.PI/2);
-      const cx = x + rr;
-      const cy = y + h - rr;
-      const px = cx + Math.cos(a)*rr;
-      const py = cy + Math.sin(a)*rr;
-      const nx = Math.cos(a);
-      const ny = Math.sin(a);
-      pts[i] = {x:px, y:py, nx:nx, ny:ny};
-      continue;
-    }
-    d -= arc;
-
-    // 7) left edge (bottom->top)
-    if(d < Lside){
-      const px = x;
-      const py = y + h - rr - d;
-      pts[i] = {x:px, y:py, nx:-1, ny:0};
-      continue;
-    }
-    d -= Lside;
-
-    // 8) top-left arc
-    {
-      const t = (arc === 0) ? 0 : (d / arc);
-      const a = Math.PI + t*(Math.PI/2);
-      const cx = x + rr;
-      const cy = y + rr;
-      const px = cx + Math.cos(a)*rr;
-      const py = cy + Math.sin(a)*rr;
-      const nx = Math.cos(a);
-      const ny = Math.sin(a);
-      pts[i] = {x:px, y:py, nx:nx, ny:ny};
-    }
-  }
-  return pts;
-}
-
-const radiatorTargets = [
-  { name:'yes', el: yes, color:'#00fff0', glow:'rgba(0,255,240,.85)' },
-  { name:'no',  el: no,  color:'#ff004c', glow:'rgba(255,0,76,.85)' },
-  { name:'ov',  el: tapOverlayText, color:'#00fff0', glow:'rgba(0,255,240,.85)' }
-];
-
-const radState = new Map(); // el -> { key, pts, val, peak }
-
-function getGeom(el){
-  if(!el || !el.isConnected) return null;
-  const rect = el.getBoundingClientRect();
-  if(rect.width < 2 || rect.height < 2) return null;
-
-  const r = firstRadiusPx(el);
-  // spacing: “2 in place of one” dense look
-  const spacing = 2.4;
-
-  const key = `${rect.left.toFixed(2)}|${rect.top.toFixed(2)}|${rect.width.toFixed(2)}|${rect.height.toFixed(2)}|${r.toFixed(2)}|${spacing}`;
-  let st = radState.get(el);
-  if(!st || st.key !== key){
-    const pts = buildRoundedPerimeter(rect, r, spacing);
-    st = {
-      key,
-      pts,
-      val: new Float32Array(pts.length),
-      peak: new Float32Array(pts.length)
-    };
-    radState.set(el, st);
-  }
-  return st;
-}
-
-function clearRadiatorCanvas(){
-  rctx.clearRect(0,0,innerWidth,innerHeight);
-  // decay buffers smoothly so it doesn’t “resume”
-  for(const st of radState.values()){
-    for(let i=0;i<st.val.length;i++){
-      st.val[i] *= 0.85;
-      st.peak[i] *= 0.90;
-    }
-  }
-}
-
-// Peak-hold + spectrum mapping around perimeter (TOP->RIGHT->BOTTOM->LEFT continuous)
-function drawRadiators(freq){
-  rctx.clearRect(0,0,innerWidth,innerHeight);
-
-  // pick band
-  const startBin = 10;
-  const endBin = Math.min(freq.length-1, 640);
-  const band = Math.max(1, endBin - startBin);
-
-  const fall = 0.78;       // faster fall for base
-  const peakFall = 0.92;   // slower fall for peak (readable)
-  const baseLen = 2.0;     // minimum
-  const maxLen = 56.0;     // “exaggeration” without being silly
-
-  // render hints
-  rctx.lineWidth = 1;
-  rctx.lineCap = 'round';
-
-  for(const t of radiatorTargets){
-    // overlay radiators only after audio started (overlay visible but bars only after unlock)
-    const st = getGeom(t.el);
-    if(!st) continue;
-
-    // only show overlay pill while overlay is visible (not display:none)
-    // (tapOverlay gets class hidden => display:none)
-    // tapOverlayText rect will become 0 in that case; already handled.
-
-    // per-scene gain (kept from your earlier feel)
-    let gain = 1.0;
-    if(currentAudioEl === happySound && t.name === 'yes') gain = 1.25;
-    if(currentAudioEl === heartbeat && t.name === 'no') gain = 1.35;
-
-    rctx.strokeStyle = t.color;
-    rctx.shadowColor = t.glow;
-    rctx.shadowBlur = 10;
-
-    const n = st.pts.length;
-    for(let i=0;i<n;i++){
-      const bin = startBin + Math.floor((i / n) * band);
-      const v = (freq[bin] / 255);
-      const s = (v*v) * gain;
-
-      st.val[i] = Math.max(s, st.val[i]*fall);
-      st.peak[i] = Math.max(st.val[i], st.peak[i]*peakFall);
-
-      const L = baseLen + st.peak[i] * maxLen;
-
-      const p = st.pts[i];
-      const x1 = p.x, y1 = p.y;
-      const x2 = x1 + p.nx * L;
-      const y2 = y1 + p.ny * L;
-
-      rctx.beginPath();
-      rctx.moveTo(x1, y1);
-      rctx.lineTo(x2, y2);
-      rctx.stroke();
-    }
-  }
-
-  // reset shadow so it doesn’t affect other drawings
-  rctx.shadowBlur = 0;
-}
-/* ========================================================================== */
-;
+  currentAudioEl = el;
 
   try{
     const src = getSourceFor(el);
@@ -790,17 +548,29 @@ function visualLoop(){
   const playing = analyser && currentAudioEl && !currentAudioEl.paused;
 
   if(!playing){
-    clearRadiatorCanvas();
+    resetRadiators(yesRad);
+    resetRadiators(noRad);
+    resetRadiators(overlayRad);
     visRAF = requestAnimationFrame(visualLoop);
     return;
   }
 
   analyser.getByteFrequencyData(dataArr);
 
-  // Approved curved radiators (YES cyan, NO red, overlay cyan)
-  drawRadiators(dataArr);
+  setRadiatorsOn(yesRad,true);
+  setRadiatorsOn(noRad,true);
+  setRadiatorsOn(overlayRad,true);
 
-  // keep your “perfect” question glow in sync
+  // Feel-intent bias per scene (still using real bins)
+  const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
+  const ovGain  = 1.0;
+
+  applySpectrum(yesRad, dataArr, yesGain);
+  applySpectrum(noRad, dataArr, noGain);
+  applySpectrum(overlayRad, dataArr, ovGain);
+
+  // subtle question breathing based on a mid bin
   const midBin = Math.min(110, dataArr.length-1);
   const v = dataArr[midBin]/255;
   const qGlow = Math.round(25 + (v*v)*85);
@@ -808,7 +578,6 @@ function visualLoop(){
 
   visRAF = requestAnimationFrame(visualLoop);
 }
-
 /* ========================================================== */
 
 /* YES FLOW */
@@ -998,8 +767,6 @@ async function unlockAndStartQuestion(){
     setActiveAudio(questionSound);
     await questionSound.play();
   }catch(e){
-    // allow retry on next tap if autoplay is blocked
-    overlayGestureHandled=false;
     return;
   }
 
@@ -1020,9 +787,280 @@ async function unlockAndStartQuestion(){
   no.style.pointerEvents = '';
 }
 
+tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
 
-// Overlay clicks must advance every step (original behavior)
-tapOverlay.addEventListener('click', unlockAndStartQuestion, { passive:true });
+
+
+/* ===================== APPROVED BAR LOGIC (CANVAS, SEAMLESS CORNERS) ===================== */
+(() => {
+  // Create canvas once (no changes to your existing logic)
+  let canvas = document.getElementById('vizCanvas');
+  if(!canvas){
+    canvas = document.createElement('canvas');
+    canvas.id = 'vizCanvas';
+    document.body.appendChild(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  function resize(){
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // Elements to radiate around (stable ids)
+  const yesEl = document.getElementById('yes');
+  const noEl  = document.getElementById('no');
+  const ovEl  = document.getElementById('tapOverlayText');
+
+  // Small helpers
+  const clamp01 = (x)=>Math.max(0, Math.min(1, x));
+  const edgeWeight = (t)=>0.25 + 0.75*Math.sin(Math.PI*t);
+
+  // Peak-hold state per target
+  class Radiator {
+    constructor(getRect, getRadius, color){
+      this.getRect = getRect;
+      this.getRadius = getRadius;
+      this.color = color; // CSS color string
+      this.cacheKey = '';
+      this.points = []; // {x,y,nx,ny, region, tInRegion, idxInRegion}
+      this.regionIdx = { top:[], right:[], bottom:[], left:[] };
+      this.level = [];     // smoothed
+      this.peak = [];      // peak-hold
+      this.val  = [];      // instantaneous smoothed
+    }
+
+    build(){
+      const rect = this.getRect();
+      if(!rect) return;
+
+      const r = this.getRadius(rect);
+      const key = `${Math.round(rect.left)}|${Math.round(rect.top)}|${Math.round(rect.width)}|${Math.round(rect.height)}|${Math.round(r*10)}`;
+      if(key === this.cacheKey) return;
+      this.cacheKey = key;
+
+      const spacing = 3.5; // dense (2-in-place-of-1 feel)
+      const w = rect.width, h = rect.height;
+      const rr = Math.max(0, Math.min(r, w/2, h/2));
+
+      const straightTop = Math.max(0, w - 2*rr);
+      const straightSide = Math.max(0, h - 2*rr);
+      const arcLen = 0.5*Math.PI*rr; // quarter circle
+      const perim = straightTop*2 + straightSide*2 + arcLen*4;
+
+      const count = Math.max(180, Math.floor(perim / spacing));
+      this.points = [];
+      this.regionIdx = { top:[], right:[], bottom:[], left:[] };
+      this.level = new Array(count).fill(0);
+      this.val   = new Array(count).fill(0);
+      this.peak  = new Array(count).fill(0);
+
+      const x0 = rect.left, y0 = rect.top;
+
+      const add = (x,y,nx,ny) => {
+        let region = "top";
+        if(Math.abs(nx) > Math.abs(ny)){
+          region = (nx > 0) ? "right" : "left";
+        }else{
+          region = (ny > 0) ? "bottom" : "top";
+        }
+        const idx = this.points.length;
+        this.points.push({x,y,nx,ny, region, tInRegion:0, idxInRegion:0});
+        this.regionIdx[region].push(idx);
+      };
+
+      for(let i=0;i<count;i++){
+        let d = (i / count) * perim;
+
+        if(d <= straightTop){
+          add(x0 + rr + d, y0, 0,-1);
+          continue;
+        }
+        d -= straightTop;
+
+        if(d <= arcLen){
+          const t = (arcLen===0) ? 0 : d/arcLen;
+          const th = (-Math.PI/2) + t*(Math.PI/2);
+          const cx = x0 + w - rr, cy = y0 + rr;
+          add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+          continue;
+        }
+        d -= arcLen;
+
+        if(d <= straightSide){
+          add(x0 + w, y0 + rr + d, 1,0);
+          continue;
+        }
+        d -= straightSide;
+
+        if(d <= arcLen){
+          const t = (arcLen===0) ? 0 : d/arcLen;
+          const th = 0 + t*(Math.PI/2);
+          const cx = x0 + w - rr, cy = y0 + h - rr;
+          add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+          continue;
+        }
+        d -= arcLen;
+
+        if(d <= straightTop){
+          add(x0 + w - rr - d, y0 + h, 0,1);
+          continue;
+        }
+        d -= straightTop;
+
+        if(d <= arcLen){
+          const t = (arcLen===0) ? 0 : d/arcLen;
+          const th = (Math.PI/2) + t*(Math.PI/2);
+          const cx = x0 + rr, cy = y0 + h - rr;
+          add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+          continue;
+        }
+        d -= arcLen;
+
+        if(d <= straightSide){
+          add(x0, y0 + h - rr - d, -1,0);
+          continue;
+        }
+        d -= straightSide;
+
+        const t = (arcLen===0) ? 0 : (d/arcLen);
+        const th = Math.PI + t*(Math.PI/2);
+        const cx = x0 + rr, cy = y0 + rr;
+        add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+      }
+
+      // compute region-local indices + normalized t for weighting
+      for(const region of ["top","right","bottom","left"]){
+        const idxs = this.regionIdx[region];
+        const N = idxs.length;
+        for(let j=0;j<N;j++){
+          const p = this.points[idxs[j]];
+          p.idxInRegion = j;
+          p.tInRegion = (N<=1) ? 0 : j/(N-1);
+        }
+      }
+    }
+
+    updateFromSpectrum(freq){
+      if(!this.points.length) return;
+      const fall = 0.78;     // value decay
+      const peakFall = 0.92; // peak decay
+
+      // choose band (avoid rumble + hiss)
+      const startBin = 10;
+      const endBin = Math.min(freq.length-1, 640);
+      const band = Math.max(1, endBin - startBin);
+      const total = this.points.length;
+
+      // compute delays by distance-from-center inside region (your "feel" requirement)
+      const regionInfo = {};
+      for(const region of ["top","right","bottom","left"]){
+        const idxs = this.regionIdx[region];
+        regionInfo[region] = { N: idxs.length, center: (idxs.length-1)/2 };
+      }
+
+      for(let i=0;i<total;i++){
+        const p = this.points[i];
+        const info = regionInfo[p.region];
+        const dist = Math.abs(p.idxInRegion - info.center);
+        const delayBins = Math.min(band-1, Math.floor(dist)*3); // subtle lag gradient
+
+        const bin = startBin + Math.floor(((i + delayBins) / total) * band);
+        const v = (freq[Math.min(endBin, Math.max(startBin, bin))] / 255);
+        const s = (v*v); // dynamics curve
+
+        // "musical" smoothing + peak-hold
+        const next = Math.max(s, this.val[i]*fall);
+        this.val[i] = next;
+        this.peak[i] = Math.max(next, this.peak[i]*peakFall);
+
+        // extra smoothing for drawing
+        const cur = this.level[i];
+        const target = this.peak[i];
+        this.level[i] = (target > cur) ? cur + (target-cur)*0.55 : cur + (target-cur)*0.18;
+      }
+    }
+
+    draw(scalePx){
+      if(!this.points.length) return;
+      ctx.strokeStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 1;
+
+      const minLen = 2.5;
+      const maxLen = scalePx;
+
+      for(let i=0;i<this.points.length;i++){
+        const p = this.points[i];
+        const w = edgeWeight(p.tInRegion);
+        const L = minLen + this.level[i]*w*maxLen;
+
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.nx*L, p.y + p.ny*L);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // Rect getters (stable; avoid DOM changes)
+  const getBtnRect = (el) => el ? el.getBoundingClientRect() : null;
+  const getRadiusFromEl = (el) => (rect) => {
+    try{
+      const br = getComputedStyle(el).borderRadius;
+      const n = parseFloat(br) || 12;
+      return n;
+    }catch(e){ return 12; }
+  };
+
+  const yesRad = new Radiator(()=>getBtnRect(yesEl), getRadiusFromEl(yesEl), '#00fff0');
+  const noRad  = new Radiator(()=>getBtnRect(noEl),  getRadiusFromEl(noEl),  '#ff004c'); // RED ONLY
+  const ovRad  = new Radiator(()=>getBtnRect(ovEl),  getRadiusFromEl(ovEl),  '#00fff0');
+
+  // Main render loop: never touches your click handlers / audio flow
+  function tick(){
+    // if overlay isn't created yet (or elements missing), keep trying
+    yesRad.build();
+    noRad.build();
+    ovRad.build();
+
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+
+    // Use your existing analyser+dataArr+currentAudioEl if available
+    const hasSpectrum = (typeof analyser !== 'undefined' && analyser && typeof dataArr !== 'undefined' && dataArr);
+    const isPlaying = (typeof currentAudioEl !== 'undefined' && currentAudioEl && !currentAudioEl.paused);
+
+    if(hasSpectrum && isPlaying){
+      analyser.getByteFrequencyData(dataArr);
+
+      // update radiators
+      yesRad.updateFromSpectrum(dataArr);
+      noRad.updateFromSpectrum(dataArr);
+      ovRad.updateFromSpectrum(dataArr);
+
+      // draw: slightly different strengths per sound (keeps your vibe)
+      const yesGain = (typeof happySound !== 'undefined' && currentAudioEl === happySound) ? 52 : 46;
+      const noGain  = (typeof heartbeat !== 'undefined' && currentAudioEl === heartbeat) ? 58 : 42;
+      const ovGain  = 46;
+
+      yesRad.draw(yesGain);
+      noRad.draw(noGain);
+      ovRad.draw(ovGain);
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+/* ======================================================================= */
 
 </script>
 
