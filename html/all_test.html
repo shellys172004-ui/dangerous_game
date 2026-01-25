@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ALL Radiator Test</title>
+<title>ALL Radiator Test (Curved Perimeter)</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -13,7 +13,6 @@
     background:radial-gradient(circle at top,#0e1a2f,#05070c);
     color:#00fff0;
   }
-
   .background{
     position:fixed;inset:0;
     background:
@@ -39,10 +38,7 @@
   }
   @keyframes floatQ{50%{transform:translateY(-10px)}}
 
-  .wrap{
-    position:relative;
-    display:inline-block;
-  }
+  .wrap{ position:relative; display:inline-block; }
 
   button{
     padding:16px 56px;
@@ -91,7 +87,7 @@
   <div class="wrap" id="pillWrap">
     <button id="pillBtn">YOU CAN STILL TURN BACK</button>
   </div>
-  <div class="hint">ALL-sides test (watch corners)</div>
+  <div class="hint">ALL-sides test (curved perimeter — corners should feel seamless)</div>
 </div>
 
 <div class="tapOverlay" id="tap">
@@ -114,9 +110,9 @@ const ctx = canvas.getContext('2d');
 const dpr = Math.max(1, window.devicePixelRatio || 1);
 
 function resize(){
-  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.width  = Math.floor(innerWidth * dpr);
   canvas.height = Math.floor(innerHeight * dpr);
-  canvas.style.width = innerWidth + 'px';
+  canvas.style.width  = innerWidth + 'px';
   canvas.style.height = innerHeight + 'px';
   ctx.setTransform(dpr,0,0,dpr,0,0);
 }
@@ -145,7 +141,7 @@ function energy(){
 }
 
 /* ===================== HISTORY (FOR VISIBLE DELAYS) ===================== */
-const HIST=220;
+const HIST=240;
 const hist=new Float32Array(HIST);
 let hPos=0;
 function push(v){ hist[hPos]=v; hPos=(hPos+1)%HIST; }
@@ -155,212 +151,251 @@ function get(delayFrames){
   return hist[i%HIST];
 }
 
-/* ===================== PER-BAR STATE ===================== */
-let topL=[], botL=[], leftL=[], rightL=[];
-let topN=0, sideN=0;
-
-function rebuild(topCount, sideCount){
-  topN = topCount;
-  sideN = sideCount;
-  topL = new Array(topN).fill(0);
-  botL = new Array(topN).fill(0);
-  leftL = new Array(sideN).fill(0);
-  rightL = new Array(sideN).fill(0);
-}
-
+/* ===================== UTIL ===================== */
 function noise(i, salt){
-  // deterministic 0..1
   const x = Math.sin((i+salt) * 127.1) * 43758.5453123;
   return x - Math.floor(x);
 }
-
 function edgeWeight(t){
-  // strongest near middle
   return 0.25 + 0.75*Math.sin(Math.PI*t);
 }
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 
-function smoothBar(arr, i, target){
-  const cur = arr[i];
-  // attack fast, decay slower (keeps it alive but not jittery)
-  const next = (target > cur)
-    ? cur + (target-cur)*0.55
-    : cur + (target-cur)*0.18;
-  arr[i] = next;
-  return next;
-}
+/* ===================== CURVED PERIMETER SAMPLING ===================== */
+/*
+  Build points along a rounded-rect perimeter:
+  - includes corner arcs naturally
+  - each point has outward normal
+  Then classify points into regions (top/right/bottom/left) by normal direction
+  and apply your mirror + delay logic *per region*.
+*/
+let cacheKey = "";
+let points = []; // {x,y,nx,ny, region, tInRegion, idxInRegion}
+let regionIndices = { top:[], right:[], bottom:[], left:[] };
+let levels = []; // per point smoothing state
 
-/* ===================== DRAW ALL SIDES ===================== */
-function drawAll(master){
-  const r = wrap.getBoundingClientRect();
+function buildPerimeter(rect){
+  const style = getComputedStyle(btn);
+  let r = parseFloat(style.borderRadius) || 18;
+  r = Math.max(0, Math.min(r, rect.width/2, rect.height/2));
 
-  // density: "2 in the place of 1"
+  // density (your “2 in place of 1”)
   const spacing = 3.5;
 
-  // read actual border radius (rounded corners)
-  const br = parseFloat(getComputedStyle(btn).borderRadius) || 18;
+  // perimeter lengths
+  const w = rect.width, h = rect.height;
+  const straightTop = Math.max(0, w - 2*r);
+  const straightSide = Math.max(0, h - 2*r);
+  const arcLen = 0.5*Math.PI*r; // quarter circle length
+  const perimeter =
+    straightTop*2 + straightSide*2 + arcLen*4;
 
-  // keep bars off the curved corner area so they look attached, not messy
-  const cornerPad = br + 2; // stop bars before the rounded corner starts
+  const count = Math.max(140, Math.floor(perimeter / spacing));
+  points = [];
+  regionIndices = { top:[], right:[], bottom:[], left:[] };
+  levels = new Array(count).fill(0);
 
-  const usableW = Math.max(10, r.width - cornerPad*2);
-  const usableH = Math.max(10, r.height - cornerPad*2);
+  // helper to push point
+  function addPoint(x,y,nx,ny){
+    // classify by normal (this makes corners blend seamlessly)
+    let region = "top";
+    if(Math.abs(nx) > Math.abs(ny)){
+      region = (nx > 0) ? "right" : "left";
+    }else{
+      region = (ny > 0) ? "bottom" : "top";
+    }
 
-  const newTopN  = Math.max(32, Math.floor(usableW / spacing));
-  const newSideN = Math.max(22, Math.floor(usableH / spacing));
+    const idx = points.length;
+    points.push({x,y,nx,ny, region, tInRegion:0, idxInRegion:0});
+    regionIndices[region].push(idx);
+  }
 
-  if(newTopN !== topN || newSideN !== sideN) rebuild(newTopN, newSideN);
+  // walk along perimeter (clockwise), starting at top-left straight start (after corner)
+  let s = 0;
+  for(let i=0;i<count;i++){
+    const u = (i/(count)) * perimeter; // distance along perimeter
 
-  // styling
+    const x0 = rect.left;
+    const y0 = rect.top;
+
+    // segment boundaries (clockwise):
+    // 1) top straight (left->right)
+    // 2) top-right arc
+    // 3) right straight (top->bottom)
+    // 4) bottom-right arc
+    // 5) bottom straight (right->left)
+    // 6) bottom-left arc
+    // 7) left straight (bottom->top)
+    // 8) top-left arc
+
+    let d = u;
+
+    // 1) top straight
+    if(d <= straightTop){
+      const x = x0 + r + d;
+      const y = y0;
+      addPoint(x,y, 0,-1);
+      continue;
+    }
+    d -= straightTop;
+
+    // 2) top-right arc (theta -90 -> 0)
+    if(d <= arcLen){
+      const t = d/arcLen;
+      const theta = (-Math.PI/2) + t*(Math.PI/2);
+      const cx = x0 + w - r;
+      const cy = y0 + r;
+      const x = cx + r*Math.cos(theta);
+      const y = cy + r*Math.sin(theta);
+      addPoint(x,y, Math.cos(theta), Math.sin(theta));
+      continue;
+    }
+    d -= arcLen;
+
+    // 3) right straight
+    if(d <= straightSide){
+      const x = x0 + w;
+      const y = y0 + r + d;
+      addPoint(x,y, 1,0);
+      continue;
+    }
+    d -= straightSide;
+
+    // 4) bottom-right arc (theta 0 -> 90)
+    if(d <= arcLen){
+      const t = d/arcLen;
+      const theta = 0 + t*(Math.PI/2);
+      const cx = x0 + w - r;
+      const cy = y0 + h - r;
+      const x = cx + r*Math.cos(theta);
+      const y = cy + r*Math.sin(theta);
+      addPoint(x,y, Math.cos(theta), Math.sin(theta));
+      continue;
+    }
+    d -= arcLen;
+
+    // 5) bottom straight (right->left)
+    if(d <= straightTop){
+      const x = x0 + w - r - d;
+      const y = y0 + h;
+      addPoint(x,y, 0,1);
+      continue;
+    }
+    d -= straightTop;
+
+    // 6) bottom-left arc (theta 90 -> 180)
+    if(d <= arcLen){
+      const t = d/arcLen;
+      const theta = (Math.PI/2) + t*(Math.PI/2);
+      const cx = x0 + r;
+      const cy = y0 + h - r;
+      const x = cx + r*Math.cos(theta);
+      const y = cy + r*Math.sin(theta);
+      addPoint(x,y, Math.cos(theta), Math.sin(theta));
+      continue;
+    }
+    d -= arcLen;
+
+    // 7) left straight (bottom->top)
+    if(d <= straightSide){
+      const x = x0;
+      const y = y0 + h - r - d;
+      addPoint(x,y, -1,0);
+      continue;
+    }
+    d -= straightSide;
+
+    // 8) top-left arc (theta 180 -> 270)
+    {
+      const t = (arcLen === 0) ? 0 : (d/arcLen);
+      const theta = Math.PI + t*(Math.PI/2);
+      const cx = x0 + r;
+      const cy = y0 + r;
+      const x = cx + r*Math.cos(theta);
+      const y = cy + r*Math.sin(theta);
+      addPoint(x,y, Math.cos(theta), Math.sin(theta));
+    }
+  }
+
+  // compute idxInRegion + tInRegion
+  for(const region of ["top","right","bottom","left"]){
+    const idxs = regionIndices[region];
+    const N = idxs.length;
+    for(let j=0;j<N;j++){
+      const p = points[idxs[j]];
+      p.idxInRegion = j;
+      p.tInRegion = (N<=1) ? 0 : j/(N-1);
+    }
+  }
+}
+
+function ensurePerimeter(){
+  const r = wrap.getBoundingClientRect();
+  const style = getComputedStyle(btn);
+  const br = style.borderRadius || "";
+  const key = `${Math.round(r.left)}|${Math.round(r.top)}|${Math.round(r.width)}|${Math.round(r.height)}|${br}|${innerWidth}|${innerHeight}`;
+  if(key !== cacheKey){
+    cacheKey = key;
+    buildPerimeter(r);
+  }
+}
+
+/* ===================== DRAW ===================== */
+function smooth(cur, target){
+  return (target > cur)
+    ? cur + (target-cur)*0.55
+    : cur + (target-cur)*0.18;
+}
+
+function drawAll(master){
+  ensurePerimeter();
+
   ctx.lineWidth = 1;
   ctx.strokeStyle = '#00fff0';
   ctx.shadowColor = '#00fff0';
   ctx.shadowBlur = 10;
 
   const minLen = 2.5;
-  const maxLen = 46; // exaggerated like you wanted
+  const maxLen = 46;
 
-  // TOP (emit upward)
-  {
-    const center = (topN-1)/2;
-    const y = r.top;
-    for(let i=0;i<topN;i++){
-      const t = i/(topN-1);
-      const x = r.left + cornerPad + t*usableW;
-
-      const dist = Math.abs(i-center);
-      const delay = Math.min(160, Math.floor(dist)*6);
-      const e = get(delay);
-
-      const w = edgeWeight(t);
-      const n = (noise(i, 11)-0.5)*0.18;
-      const target = Math.max(0, Math.min(1, e+n));
-
-      const lvl = smoothBar(topL, i, target);
-      const L = minLen + lvl*w*maxLen;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x, y - L);
-      ctx.stroke();
-    }
+  // For each region, compute center index for mirror symmetry + delay
+  const regionInfo = {};
+  for(const region of ["top","right","bottom","left"]){
+    const idxs = regionIndices[region];
+    regionInfo[region] = {
+      idxs,
+      N: idxs.length,
+      center: (idxs.length-1)/2
+    };
   }
 
-  // BOTTOM (emit downward)
-  {
-    const center = (topN-1)/2;
-    const y = r.top + r.height;
-    for(let i=0;i<topN;i++){
-      const t = i/(topN-1);
-      const x = r.left + cornerPad + t*usableW;
+  // Draw all points
+  for(let i=0;i<points.length;i++){
+    const p = points[i];
+    const info = regionInfo[p.region];
+    if(!info || info.N < 2) continue;
 
-      const dist = Math.abs(i-center);
-      const delay = Math.min(160, Math.floor(dist)*6);
-      const e = get(delay);
+    // mirror symmetry within region
+    const dist = Math.abs(p.idxInRegion - info.center);
+    const delay = Math.min(180, Math.floor(dist)*6);
 
-      const w = edgeWeight(t);
-      const n = (noise(i, 29)-0.5)*0.18;
-      const target = Math.max(0, Math.min(1, e+n));
+    // delayed energy (the thing that makes it NOT all move together)
+    const e = get(delay);
 
-      const lvl = smoothBar(botL, i, target);
-      const L = minLen + lvl*w*maxLen;
+    // weight near middle of region (helps look like TOP version)
+    const w = edgeWeight(p.tInRegion);
 
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x, y + L);
-      ctx.stroke();
-    }
-  }
+    // small per-point variation so it feels alive but still grouped
+    const n = (noise(i, 37)-0.5) * 0.18;
 
-  // LEFT (emit left)
-  {
-    const center = (sideN-1)/2;
-    const x = r.left;
-    for(let i=0;i<sideN;i++){
-      const t = i/(sideN-1);
-      const y = r.top + cornerPad + t*usableH;
+    const target = clamp01(e + n);
+    levels[i] = smooth(levels[i], target);
 
-      const dist = Math.abs(i-center);
-      const delay = Math.min(160, Math.floor(dist)*6);
-      const e = get(delay);
+    const L = minLen + levels[i]*w*maxLen;
 
-      const w = edgeWeight(t);
-      const n = (noise(i, 47)-0.5)*0.18;
-      const target = Math.max(0, Math.min(1, e+n));
-
-      const lvl = smoothBar(leftL, i, target);
-      const L = minLen + lvl*w*maxLen;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x - L, y);
-      ctx.stroke();
-    }
-  }
-
-  // RIGHT (emit right)
-  {
-    const center = (sideN-1)/2;
-    const x = r.left + r.width;
-    for(let i=0;i<sideN;i++){
-      const t = i/(sideN-1);
-      const y = r.top + cornerPad + t*usableH;
-
-      const dist = Math.abs(i-center);
-      const delay = Math.min(160, Math.floor(dist)*6);
-      const e = get(delay);
-
-      const w = edgeWeight(t);
-      const n = (noise(i, 83)-0.5)*0.18;
-      const target = Math.max(0, Math.min(1, e+n));
-
-      const lvl = smoothBar(rightL, i, target);
-      const L = minLen + lvl*w*maxLen;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + L, y);
-      ctx.stroke();
-    }
-  }
-
-  /* ===================== CORNERS (what you wanted to inspect) =====================
-     Minimal corner continuity:
-     - Since we stop edge bars before the rounded corner, corners can look "empty".
-     - To connect the feel, we emit ONE diagonal bar from each corner.
-     - Driven by the slowest group (outermost), so corners lag nicely.
-     If you want NO diagonal corner bars: delete this block.
-  */
-  {
-    const outerGroupDelay = Math.min(180, Math.floor(Math.max(topN, sideN)/2) * 6);
-    const eCorner = get(outerGroupDelay);
-
-    const cornerLvl = Math.max(0, Math.min(1, eCorner));
-    const cornerLen = 2 + cornerLvl * 26;
-
-    ctx.shadowBlur = 10;
-
-    // TL
     ctx.beginPath();
-    ctx.moveTo(r.left, r.top);
-    ctx.lineTo(r.left - cornerLen, r.top - cornerLen);
-    ctx.stroke();
-
-    // TR
-    ctx.beginPath();
-    ctx.moveTo(r.left + r.width, r.top);
-    ctx.lineTo(r.left + r.width + cornerLen, r.top - cornerLen);
-    ctx.stroke();
-
-    // BL
-    ctx.beginPath();
-    ctx.moveTo(r.left, r.top + r.height);
-    ctx.lineTo(r.left - cornerLen, r.top + r.height + cornerLen);
-    ctx.stroke();
-
-    // BR
-    ctx.beginPath();
-    ctx.moveTo(r.left + r.width, r.top + r.height);
-    ctx.lineTo(r.left + r.width + cornerLen, r.top + r.height + cornerLen);
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + p.nx*L, p.y + p.ny*L);
     ctx.stroke();
   }
 
@@ -374,16 +409,12 @@ let master = 0;
 function loop(){
   ctx.clearRect(0,0,innerWidth,innerHeight);
 
-  let e=0;
+  let e = 0;
   if(!audioEl.paused) e = energy();
 
-  // glow smoothing
   master = master*0.86 + e*0.14;
-
-  // history uses less-smoothed e so delays stay visible
   push(e);
 
-  // text glow (same vibe)
   const glow = Math.round(22 + master*110);
   qEl.style.textShadow = `0 0 ${glow}px #00fff0`;
 
@@ -393,14 +424,13 @@ function loop(){
 }
 
 /* ===================== START ===================== */
-tap.addEventListener('pointerdown', async () => {
+tap.addEventListener('pointerdown', async ()=>{
   ensureAudio();
   try{ await audioCtx.resume(); }catch(e){}
   try{ await audioEl.play(); }catch(e){ return; }
-
   tap.classList.add('hidden');
   if(!raf) loop();
-}, {passive:true});
+},{passive:true});
 </script>
 </body>
 </html>
