@@ -69,11 +69,17 @@
     #hud { display: none; }
     #result { display: none; }
 
-    /* MENU — FLOATING ON SCREEN (NO OVERLAY) */
+    /* 🔥 IMPORTANT: Anchor menu to game rectangle */
+    .game {
+      position: relative; /* so menu can absolute-center INSIDE this box */
+      z-index: 2;
+    }
+
+    /* Menu sits ON TOP of the game rectangle and is centered in it */
     #menu.menu {
-      position: fixed;
+      position: absolute;
       inset: 0;
-      z-index: 5;
+      z-index: 50;
 
       display: flex;
       flex-direction: column;
@@ -81,8 +87,8 @@
       justify-content: center;
       gap: 26px;
 
-      background: transparent;     /* ❌ no overlay */
-      pointer-events: none;        /* allow clicks through */
+      background: transparent;
+      pointer-events: auto; /* clickable */
       text-align: center;
     }
 
@@ -105,35 +111,38 @@
       50% { transform: translateY(-12px); }
     }
 
-    /* START GAME BUTTON */
+    /* START GAME BUTTON
+       Normal: black bg + neon text
+       Hover: neon bg + black text */
     #1player.menuOption {
-      pointer-events: auto; /* only clickable element */
-
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
 
       padding: 18px 60px;
+      min-width: 240px;
+
       font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: 1px;
 
-      border-radius: 8px;
+      border-radius: 10px;
       border: 2px solid #00fff0;
       cursor: pointer;
 
-      background: transparent;
+      background: rgba(0,0,0,0.85);
       color: #00fff0;
 
       box-shadow:
         0 0 18px rgba(0,255,240,.9),
-        0 0 50px rgba(0,255,240,.45);
+        0 0 55px rgba(0,255,240,.35);
 
       transition:
         transform .15s ease,
         background .15s ease,
         color .15s ease,
         box-shadow .15s ease;
+      user-select: none;
     }
 
     #1player.menuOption:hover {
@@ -143,7 +152,7 @@
 
       box-shadow:
         0 0 30px rgba(0,255,240,1),
-        0 0 90px rgba(0,255,240,.9);
+        0 0 95px rgba(0,255,240,.85);
     }
 
     #1player.menuOption:active {
@@ -158,12 +167,6 @@
   <div class="sprinkles" id="sprinkles"></div>
 
   <div class="container">
-
-    <!-- MENU -->
-    <div id="menu" class="menu">
-      <div class="menuTitle">The Dangerous game</div>
-      <div id="1player" class="menuOption">Start Game</div>
-    </div>
 
     <!-- HUD -->
     <div id="hud" class="hud">
@@ -185,6 +188,12 @@
     <!-- GAME RECTANGLE (UNTOUCHED) -->
     <div class="game">
       <canvas id="gameWindow"></canvas>
+
+      <!-- ✅ MENU moved INSIDE .game so it centers properly -->
+      <div id="menu" class="menu">
+        <div class="menuTitle">The Dangerous game</div>
+        <div id="1player" class="menuOption">Start Game</div>
+      </div>
     </div>
 
   </div>
@@ -199,6 +208,17 @@
       s.style.animationDelay = Math.random() * 6 + 's';
       sprinkles.appendChild(s);
     }
+
+    // While menu is visible, let clicks go to the menu (not the canvas)
+    const canvas = document.getElementById('gameWindow');
+    const menu = document.getElementById('menu');
+    canvas.style.pointerEvents = 'none';
+
+    // After clicking Start Game, hide menu and enable canvas
+    document.getElementById('1player').addEventListener('click', () => {
+      menu.style.display = 'none';
+      canvas.style.pointerEvents = 'auto';
+    });
   </script>
 
   <script type="module" src="../js/index.js"></script>
