@@ -95,7 +95,11 @@ function updateHealthBars() {
 function endGame(winnerText) {
   gameOver = true
   player.velocity.x = 0
+  player.velocity.y = 0
   enemy.velocity.x = 0
+  enemy.velocity.y = 0
+
+  
 
   document.getElementById('result').style.display = 'flex'
   document.getElementById('result').innerHTML = `
@@ -115,15 +119,18 @@ function endGame(winnerText) {
 
 function animate() {
   requestAnimationFrame(animate)
-  
+
+  // ✅ If game over, freeze logic and just keep drawing current frame
   if (gameOver) {
-    // freeze screen but still draw final frame
+    c.clearRect(0, 0, canvas.width, canvas.height)
     background.update()
     shop.update()
     player.update()
     enemy.update()
     return
-    
+  }
+
+  // Normal game loop
   c.clearRect(0, 0, canvas.width, canvas.height)
 
   background.update()
@@ -133,7 +140,7 @@ function animate() {
   player.velocity.x = 0
   enemy.velocity.x = 0
 
-  // ✅ PLAYER movement from controls (guaranteed)
+  // PLAYER movement from controls
   if (controls.left && !controls.right) {
     player.velocity.x = -player.moveFactor
   } else if (controls.right && !controls.left) {
@@ -147,31 +154,24 @@ function animate() {
   player.update()
   enemy.update()
 
-  // ✅ animation selection (no glitch)
-  // PLAYER animation control
-if (player.isAttacking || player.isTakingHit) {
-  // DO NOTHING — let attack / hit animation finish
-} else if (player.inTheAir) {
-  // jump / fall handled in Fighter.update()
-} else if (player.velocity.x !== 0) {
-  player.switchSprite('run')
-} else {
-  player.switchSprite('idle')
-}
+  // PLAYER animation control (lock during attack / hit)
+  if (player.isAttacking || player.isTakingHit) {
+    // do nothing
+  } else if (!player.inTheAir && player.velocity.x !== 0) {
+    player.switchSprite('run')
+  } else if (!player.inTheAir) {
+    player.switchSprite('idle')
+  }
 
-
+  // Enemy animation control
   if (!enemy.isAttacking && !enemy.isTakingHit) {
-    if (enemy.inTheAir) {
-      // jump/fall handled in Fighter.update()
-    } else if (enemy.velocity.x !== 0) {
-      enemy.switchSprite('run')
-    } else {
-      enemy.switchSprite('idle')
-    }
+    if (!enemy.inTheAir && enemy.velocity.x !== 0) enemy.switchSprite('run')
+    else if (!enemy.inTheAir) enemy.switchSprite('idle')
   }
 
   updateHealthBars()
-  if (!gameOver) {
+
+  // Game over check
   if (player.health <= 0) {
     endGame('You Lost 💀')
     return
@@ -180,7 +180,5 @@ if (player.isAttacking || player.isTakingHit) {
     endGame('You Won 🏆')
     return
   }
-}
-
 }
 
