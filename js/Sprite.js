@@ -26,7 +26,7 @@ class Sprite {
   }
 
   draw() {
-    if (!this.image.complete || this.image.naturalWidth === 0) return
+    if (!this.image.complete) return
 
     c.drawImage(
       this.image,
@@ -44,8 +44,7 @@ class Sprite {
   animateFrames() {
     this.elapsedFrames++
     if (this.elapsedFrames % this.holdFrames === 0) {
-      this.currentFrame =
-        this.currentFrame < this.maxFrames - 1 ? this.currentFrame + 1 : 0
+      this.currentFrame = this.currentFrame < this.maxFrames - 1 ? this.currentFrame + 1 : 0
     }
   }
 
