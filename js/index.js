@@ -89,16 +89,18 @@ function enemyAI() {
     enemy.velocity.x = dist > 0 ? speed : -speed
   } else {
     enemy.velocity.x = 0
-    if (
-  enemy.attackCooldown &&
-  enemy.inAttackRange(enemy, player)) &&
-  Math.random() < 0.7   // 🔽 35% chance to attack
-) {
-  enemy.attack(player)
-}
 
+    // ✅ Correct attack condition
+    if (
+      enemy.attackCooldown &&
+      inAttackRange(enemy, player) &&
+      Math.random() < 0.7
+    ) {
+      enemy.attack(player)
+    }
   }
 }
+
 
 function updateHealthBars() {
   const p = document.getElementById('playerHealth')
