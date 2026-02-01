@@ -126,12 +126,22 @@ body {
     margin-bottom: 10px;
     cursor: pointer;
     transition: color .3s ease-in-out, box-shadow .3s ease-in-out;
+    background: rgba(0,0,0,0.88) !important;
+    color: #00fff0 !important;
+
+    box-shadow:
+    0 0 18px rgba(0,255,240,.9),
+    0 0 55px rgba(0,255,240,.35);
 }
 
 .menuOption:hover {
-    box-shadow: inset 350px 0 0 0 #9eade9;
-    color: black;
-}
+    background: rgba(0,0,0,0.88) !important;
+    color: #00fff0 !important;
+
+    box-shadow:
+    0 0 18px rgba(0,255,240,.9),
+    0 0 55px rgba(0,255,240,.35);
+    }
 
 .author {
     padding-top: 10px;
