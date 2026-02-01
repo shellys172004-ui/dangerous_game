@@ -1,220 +1,224 @@
-import { player, enemy } from './Fighter.js'
-import { background, shop } from './Sprite.js'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-const canvas = document.querySelector('canvas')
-const c = canvas.getContext('2d')
+  <title>The Dangerous game</title>
 
-let started = false
-let gameOver = false
+  <!-- KEEP existing game CSS (DO NOT TOUCH game rectangle styles) -->
+  <link rel="stylesheet" href="../css/styles.css" />
 
+  <!-- Match question.html vibe -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
 
-// ✅ Robust controls (no lastKey / no nested pressed objects needed)
-const controls = {
-  left: false,
-  right: false,
-}
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-document.getElementById('1player').addEventListener('click', start)
-
-function start() {
-  document.getElementById('menu').style.display = 'none'
-  document.getElementById('hud').style.display = 'flex'
-
-  if (!started) {
-    started = true
-    attachControls()
-    animate()
-  }
-}
-
-function attachControls() {
-  window.addEventListener(
-    'keydown',
-    (e) => {
-      // stop scroll
-      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault()
-      if (e.key === 'w') e.preventDefault()
-
-      // movement
-      if (e.key === 'a') controls.left = true
-      if (e.key === 'd') controls.right = true
-
-      // jump
-      if (e.key === 'w') {
-        if (!player.inTheAir) player.velocity.y = -20
-      }
-
-      // attack
-     if (e.code === 'Space' || e.key === ' ') {
-  e.preventDefault()
-  if (!player.isAttacking) {
-    player.attack(enemy)
-  }
-}
-
-    },
-    { passive: false }
-  )
-
-  window.addEventListener('keyup', (e) => {
-    if (e.key === 'a') controls.left = false
-    if (e.key === 'd') controls.right = false
-  })
-}
-
-function inAttackRange(attacker, defender) {
-  const attackX = attacker.position.x + attacker.attackBox.offSet.x
-  return (
-    attackX + attacker.attackBox.width >= defender.position.x &&
-    attackX <= defender.position.x + defender.width &&
-    attacker.position.y + attacker.attackBox.height >= defender.position.y &&
-    attacker.position.y <= defender.position.y + defender.height
-  )
-}
-
-
-// ✅ Simple AI: approach + attack when close
-function enemyAI() {
-  if (enemy.health <= 0) {
-    enemy.velocity.x = 0
-    return
-  }
-
-  const dist = player.position.x - enemy.position.x
-  const abs = Math.abs(dist)
-  const speed = 1.4
-
-  if (abs > 160) {
-    enemy.velocity.x = dist > 0 ? speed : -speed
-  } else {
-    enemy.velocity.x = 0
-
-    // ✅ Correct attack condition
-    if (
-      enemy.attackCooldown &&
-      inAttackRange(enemy, player) &&
-      Math.random() < 0.7
-    ) {
-      enemy.attack(player)
+    body {
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Orbitron', sans-serif;
+      background: radial-gradient(circle at top, #0e1a2f, #05070c);
+      color: #00fff0;
     }
-  }
-}
 
+    /* BACKGROUND GRID */
+    .background {
+      position: fixed;
+      inset: 0;
+      background:
+        repeating-linear-gradient(0deg, rgba(0,255,255,.06) 0 1px, transparent 1px 36px),
+        repeating-linear-gradient(90deg, rgba(0,255,255,.06) 0 1px, transparent 1px 36px);
+      animation: grid 12s linear infinite;
+      z-index: 0;
+    }
+    @keyframes grid { to { background-position: 0 36px, 36px 0; } }
 
-function updateHealthBars() {
-  const p = document.getElementById('playerHealth')
-  const e = document.getElementById('enemyHealth')
-  if (p) p.style.width = `${Math.max(0, player.health)}%`
-  if (e) e.style.width = `${Math.max(0, enemy.health)}%`
-}
+    /* SPRINKLES */
+    .sprinkles { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+    .sprinkle {
+      position: absolute;
+      width: 4px; height: 4px;
+      background: #00fff0;
+      box-shadow: 0 0 12px #00fff0, 0 0 30px #00fff0;
+      animation: float 6s linear infinite;
+    }
+    @keyframes float {
+      from { transform: translateY(100vh); opacity: 0; }
+      to   { transform: translateY(-10vh); opacity: 1; }
+    }
 
+    /* Don’t show old keymapping section */
+    .information { display: none !important; }
 
-function endGame(winnerText) {
-  gameOver = true
+    /* IMPORTANT: keep layers sane */
+    .container { position: relative; z-index: 2; }
+    .game { position: relative; }   /* anchor overlays to the game rectangle */
+    #gameWindow { position: relative; z-index: 1; }
 
-  // Freeze everything
-  player.velocity.x = 0
-  player.velocity.y = 0
-  enemy.velocity.x = 0
-  enemy.velocity.y = 0
+    /* ✅ Hide HUD on front page (JS will enable it on start) */
+    #hud { display: none; }
 
-  document.getElementById('result').style.display = 'flex'
+    /* Result hidden initially (JS shows it on gameover) */
+    #result { display: none; }
 
-  // ✅ WIN → auto redirect
-  if (winnerText.includes('Won')) {
-    document.getElementById('result').innerHTML = `
-      <div style="text-align:center">
-        <h1>${winnerText}</h1>
-        <p>Redirecting...</p>
+    /* MENU: centered inside the game rectangle */
+    #menu.menu {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+
+      text-align: center;
+      background: transparent;
+      z-index: 9999;
+    }
+
+    .menuTitle {
+      font-size: 7.5rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #00fff0;
+      text-shadow:
+        0 0 12px rgba(0,255,240,1),
+        0 0 36px rgba(0,255,240,.9),
+        0 0 90px rgba(0,255,240,.7);
+      animation: floatQ 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes floatQ { 50% { transform: translateY(-12px); } }
+
+    /* Start button: BLACK bg + neon text, hover neon bg + black text */
+    #1player.menuOption {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      min-width: 280px;
+      padding: 18px 58px;
+
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+
+      border-radius: 10px;
+      border: 2px solid #00fff0;
+
+      cursor: pointer;
+
+      background: rgba(0,0,0,0.88);
+      color: #00fff0;
+
+      box-shadow:
+        0 0 18px rgba(0,255,240,.9),
+        0 0 55px rgba(0,255,240,.35);
+
+      transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+      user-select: none;
+    }
+
+    #1player.menuOption:hover {
+      background: #00fff0;
+      color: #000;
+      transform: translateY(-2px) scale(1.05);
+      box-shadow:
+        0 0 30px rgba(0,255,240,1),
+        0 0 95px rgba(0,255,240,.85);
+    }
+
+    #1player.menuOption:active { transform: scale(0.98); }
+
+    /* HUD overlay inside game */
+    #hud.hud {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+
+      width: calc(100% - 40px);
+      max-width: 1024px;
+
+      justify-content: space-between;
+      align-items: center;
+
+      z-index: 50;
+      pointer-events: none; /* never blocks the game */
+    }
+
+    /* health blocks size */
+    .healthLayout { width: 40%; }
+
+    /* Result overlay on top of everything */
+    #result.result {
+      position: absolute;
+      inset: 0;
+
+      align-items: center;
+      justify-content: center;
+
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+
+      z-index: 60;
+      pointer-events: auto; /* so retry button is clickable */
+    }
+  </style>
+</head>
+
+<body>
+  <div class="background"></div>
+  <div class="sprinkles" id="sprinkles"></div>
+
+  <div class="container">
+    <div class="game">
+      <canvas id="gameWindow"></canvas>
+
+      <!-- HUD overlay (inside .game) -->
+      <div id="hud" class="hud">
+        <div class="healthLayout">
+          <div class="remainingHealthbar"></div>
+          <div id="playerHealth" class="totalHealthBar"></div>
+        </div>
+
+        <div id="timer" class="timer"> -- </div>
+
+        <div class="healthLayout">
+          <div class="remainingHealthbar"></div>
+          <div id="enemyHealth" class="totalHealthBar"></div>
+        </div>
       </div>
-    `
 
-    // ⏳ wait 2 seconds, then go to question.html
-    setTimeout(() => {
-      window.location.href = './question.html'
-    }, 2000)
+      <!-- Result overlay -->
+      <div id="result" class="result"></div>
 
-    return
-  }
-
-  // ❌ LOSS → show retry
-  document.getElementById('result').innerHTML = `
-    <div style="text-align:center">
-      <h1>${winnerText}</h1>
-      <button id="retryBtn" style="padding:10px 20px;font-size:16px;cursor:pointer">
-        Retry
-      </button>
+      <!-- Menu overlay -->
+      <div id="menu" class="menu">
+        <div class="menuTitle">THE DANGEROUS GAME</div>
+        <div id="1player" class="menuOption">Start Game</div>
+      </div>
     </div>
-  `
+  </div>
 
-  document.getElementById('retryBtn').onclick = () => {
-    location.reload()
-  }
-}
+  <script>
+    // Sprinkles
+    const sprinkles = document.getElementById('sprinkles');
+    for (let i = 0; i < 50; i++) {
+      const s = document.createElement('div');
+      s.className = 'sprinkle';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.animationDelay = Math.random() * 6 + 's';
+      sprinkles.appendChild(s);
+    }
+  </script>
 
-
-function animate() {
-  requestAnimationFrame(animate)
-
-  // ✅ If game over, freeze logic and just keep drawing current frame
-  if (gameOver) {
-    c.clearRect(0, 0, canvas.width, canvas.height)
-    background.update()
-    shop.update()
-    player.update()
-    enemy.update()
-    return
-  }
-
-  // Normal game loop
-  c.clearRect(0, 0, canvas.width, canvas.height)
-
-  background.update()
-  shop.update()
-
-  // reset X velocity each frame
-  player.velocity.x = 0
-  enemy.velocity.x = 0
-
-  // PLAYER movement from controls
-  if (controls.left && !controls.right) {
-    player.velocity.x = -player.moveFactor
-  } else if (controls.right && !controls.left) {
-    player.velocity.x = player.moveFactor
-  }
-
-  // AI
-  enemyAI()
-
-  // update/draw
-  player.update()
-  enemy.update()
-
-  // PLAYER animation control (lock during attack / hit)
-  if (player.isAttacking || player.isTakingHit) {
-    // do nothing
-  } else if (!player.inTheAir && player.velocity.x !== 0) {
-    player.switchSprite('run')
-  } else if (!player.inTheAir) {
-    player.switchSprite('idle')
-  }
-
-  // Enemy animation control
-  if (!enemy.isAttacking && !enemy.isTakingHit) {
-    if (!enemy.inTheAir && enemy.velocity.x !== 0) enemy.switchSprite('run')
-    else if (!enemy.inTheAir) enemy.switchSprite('idle')
-  }
-
-  updateHealthBars()
-
-  // Game over check
-  if (player.health <= 0) {
-    endGame('You Lost 💀')
-    return
-  }
-  if (enemy.health <= 0) {
-    endGame('You Won 🏆')
-    return
-  }
-}
-
+  <script type="module" src="../js/index.js"></script>
+</body>
+</html>
