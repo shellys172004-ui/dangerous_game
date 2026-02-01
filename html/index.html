@@ -68,8 +68,9 @@
       position: absolute;
       inset: 0 auto auto 0;
       width: 100%;
-      z-index: 50;
+      z-index: 50 !important;
       pointer-events: none; /* so it never blocks gameplay */
+      display: none !important;
     }
 
     /* Result overlay (YOU WON/LOST + retry) */
@@ -78,6 +79,7 @@
       inset: 0;
       z-index: 60;
       pointer-events: auto; /* so retry button is clickable */
+      display: none !important;
     }
 
     /* MENU: centered INSIDE the game rectangle */
@@ -86,7 +88,6 @@
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      z-index: 70;
 
       display: flex;
       flex-direction: column;
@@ -97,6 +98,7 @@
       text-align: center;
       padding: 0;
       background: transparent;
+      z-index: 999999 !important;
     }
 
     .menuTitle {
@@ -115,9 +117,9 @@
 
     /* Start button: BLACK bg + neon text, hover neon bg + black text */
     #1player.menuOption {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
 
       min-width: 280px;
       padding: 18px 58px;
@@ -127,11 +129,11 @@
       letter-spacing: 1px;
 
       border-radius: 10px;
-      border: 2px solid #00fff0;
+      border: 2px solid #00fff0 !important;
       cursor: pointer;
 
-      background: rgba(0,0,0,0.88);
-      color: #00fff0;
+      background: rgba(0,0,0,0.88) !important;
+      color: #00fff0 !important;
 
       box-shadow:
         0 0 18px rgba(0,255,240,.9),
@@ -142,8 +144,8 @@
     }
 
     #1player.menuOption:hover {
-      background: linear-gradient(135deg, #00fff0, #00fff0);
-      color: #000;
+      background: linear-gradient(135deg, #00fff0, #00fff0) !important;
+      color: #000 !important;
       transform: translateY(-2px) scale(1.05);
       box-shadow:
         0 0 30px rgba(0,255,240,1),
