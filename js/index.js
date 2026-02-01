@@ -5,6 +5,8 @@ const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
 let started = false
+let gameOver = false
+
 
 // ✅ Robust controls (no lastKey / no nested pressed objects needed)
 const controls = {
@@ -86,6 +88,25 @@ function updateHealthBars() {
   if (e) e.style.width = `${Math.max(0, enemy.health)}%`
 }
 
+
+function endGame(winnerText) {
+  gameOver = true
+
+  document.getElementById('result').style.display = 'flex'
+  document.getElementById('result').innerHTML = `
+    <div style="text-align:center">
+      <h1>${winnerText}</h1>
+      <button id="retryBtn" style="padding:10px 20px;font-size:16px;cursor:pointer">
+        Retry
+      </button>
+    </div>
+  `
+
+  document.getElementById('retryBtn').onclick = () => {
+    location.reload()
+  }
+}
+
 function animate() {
   requestAnimationFrame(animate)
   c.clearRect(0, 0, canvas.width, canvas.height)
@@ -133,4 +154,16 @@ function animate() {
   }
 
   updateHealthBars()
+  if (!gameOver) {
+  if (player.health <= 0) {
+    endGame('You Lost 💀')
+    return
+  }
+  if (enemy.health <= 0) {
+    endGame('You Won 🏆')
+    return
+  }
 }
+
+}
+
