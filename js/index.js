@@ -21,29 +21,33 @@ function start() {
 }
 
 function controls() {
-  window.addEventListener('keydown', (e) => {
-    // IMPORTANT: stop browser scrolling (space/arrow keys)
-    if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      e.preventDefault()
-    }
+  // IMPORTANT for Firefox: passive:false so preventDefault works for Space
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      // Stop page scroll for keys we use
+      if (e.key === ' ' || e.key === 'w') e.preventDefault()
 
-    if (e.key === 'a') {
-      player.keys.left.pressed = true
-      player.lastKey = 'left'
-    }
-    if (e.key === 'd') {
-      player.keys.right.pressed = true
-      player.lastKey = 'right'
-    }
-    if (e.key === 'w') {
-      e.preventDefault()
-      if (!player.inTheAir) player.velocity.y = -20
-    }
-    if (e.key === ' ') {
-      e.preventDefault()
-      player.attack(enemy)
-    }
-  })
+      // Avoid key-repeat spamming attack
+      if (e.key === ' ' && e.repeat) return
+
+      if (e.key === 'a') {
+        player.keys.left.pressed = true
+        player.lastKey = 'left'
+      }
+      if (e.key === 'd') {
+        player.keys.right.pressed = true
+        player.lastKey = 'right'
+      }
+      if (e.key === 'w') {
+        if (!player.inTheAir) player.velocity.y = -20
+      }
+      if (e.key === ' ') {
+        player.attack(enemy)
+      }
+    },
+    { passive: false }
+  )
 
   window.addEventListener('keyup', (e) => {
     if (e.key === 'a') player.keys.left.pressed = false
@@ -58,21 +62,14 @@ function enemyAI() {
   const abs = Math.abs(dist)
   const speed = 2.2
 
-  // move closer until in “fight range”
-  if (abs > 140) {
+  if (abs > 160) {
     enemy.velocity.x = dist > 0 ? speed : -speed
-    enemy.switchSprite('run')
-    return
-  }
-
-  // stop in range
-  enemy.velocity.x = 0
-
-  // attack only if actually hitting + cooldown ready
-  if (enemy.attackCooldown && enemy.isHitting(player)) {
-    enemy.attack(player)
+    enemy.lastKey = dist > 0 ? 'right' : 'left'
   } else {
-    enemy.switchSprite('idle')
+    enemy.velocity.x = 0
+    if (enemy.attackCooldown && enemy.isHitting(player)) {
+      enemy.attack(player)
+    }
   }
 }
 
@@ -83,13 +80,26 @@ function animate() {
   background.update()
   shop.update()
 
-  // reset x each frame; movement()/AI will set it
+  // reset X velocity each frame; movement()/AI sets it
   player.velocity.x = 0
   enemy.velocity.x = 0
 
-  player.movement()
+  // apply control + AI
+  const playerRunning = player.movement()
   enemyAI()
 
+  // update positions + draw
   player.update()
   enemy.update()
+
+  // ✅ choose animations HERE (not inside Fighter.update)
+  if (!player.inTheAir && !player.isAttacking && !player.isTakingHit) {
+    if (playerRunning) player.switchSprite('run')
+    else player.switchSprite('idle')
+  }
+
+  if (!enemy.inTheAir && !enemy.isAttacking && !enemy.isTakingHit) {
+    if (Math.abs(enemy.velocity.x) > 0) enemy.switchSprite('run')
+    else enemy.switchSprite('idle')
+  }
 }
