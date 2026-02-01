@@ -72,15 +72,20 @@ function enemyAI() {
 
   const dist = player.position.x - enemy.position.x
   const abs = Math.abs(dist)
-  const speed = 2.2
+  const speed = 1.4
 
   if (abs > 160) {
     enemy.velocity.x = dist > 0 ? speed : -speed
   } else {
     enemy.velocity.x = 0
-    if (enemy.attackCooldown && enemy.isHitting(player)) {
-      enemy.attack(player)
-    }
+    if (
+  enemy.attackCooldown &&
+  enemy.isHitting(player) &&
+  Math.random() < 0.35   // 🔽 35% chance to attack
+) {
+  enemy.attack(player)
+}
+
   }
 }
 
