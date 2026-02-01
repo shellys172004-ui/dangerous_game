@@ -183,7 +183,7 @@ export const enemy = new Fighter({
     fall: { imageSrc: '/dangerous_game/assets/img/kenji/Fall.png', maxFrames: 2 },
     attack1: { imageSrc: '/dangerous_game/assets/img/kenji/Attack1.png', maxFrames: 4 },
     // ✅ changed: match filename casing (adjust if your repo differs)
-    takeHit: { imageSrc: '/dangerous_game/assets/img/kenji/Take Hit White.png', maxFrames: 3 },
+    takeHit: { imageSrc: '/dangerous_game/assets/img/kenji/Take hit white.png', maxFrames: 3 },
     death: { imageSrc: '/dangerous_game/assets/img/kenji/Death.png', maxFrames: 7 }
   },
   keys: { left: { pressed: false }, right: { pressed: false } },
