@@ -61,24 +61,35 @@ class Fighter extends Sprite {
   }
 
   attack(enemyFighter) {
-    if (this.health <= 0) return
-    if (!this.attackCooldown) return
+  if (this.health <= 0) return
+  if (!this.attackCooldown || this.isAttacking) return
 
-    this.attackCooldown = false
-    this.isAttacking = true
-    this.switchSprite('attack1')
+  this.attackCooldown = false
+  this.isAttacking = true
 
-    // hit check
-    if (this.isHitting(enemyFighter)) {
-      enemyFighter.health = Math.max(0, enemyFighter.health - 20)
-      enemyFighter.isTakingHit = true
-      enemyFighter.switchSprite('takeHit')
-      setTimeout(() => (enemyFighter.isTakingHit = false), 250)
-    }
+  this.switchSprite('attack1')
 
-    setTimeout(() => (this.isAttacking = false), this.attackTime || 400)
-    setTimeout(() => (this.attackCooldown = true), 600)
+  // hit check
+  if (this.isHitting(enemyFighter)) {
+    enemyFighter.health = Math.max(0, enemyFighter.health - 20)
+    enemyFighter.isTakingHit = true
+    enemyFighter.switchSprite('takeHit')
+
+    setTimeout(() => {
+      enemyFighter.isTakingHit = false
+    }, 300)
   }
+
+  // end attack
+  setTimeout(() => {
+    this.isAttacking = false
+  }, this.attackTime)
+
+  // cooldown
+  setTimeout(() => {
+    this.attackCooldown = true
+  }, 700)
+}
 
   update() {
     super.update()
