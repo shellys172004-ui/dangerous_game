@@ -20,7 +20,6 @@
       color:#00fff0;
     }
 
-    /* BACKGROUND GRID */
     .background{
       position:fixed;inset:0;
       background:
@@ -31,7 +30,6 @@
     }
     @keyframes grid{to{background-position:0 36px,36px 0}}
 
-    /* SPRINKLES */
     .sprinkles{position:fixed;inset:0;pointer-events:none;z-index:1}
     .sprinkle{
       position:absolute;
@@ -51,11 +49,9 @@
     .game{position:relative;}
     #gameWindow{position:relative;z-index:1;}
 
-    /* hide until start */
     #hud{display:none;}
     #result{display:none;}
 
-    /* HUD inside game rectangle */
     .game #hud{
       position:absolute;
       top:20px;
@@ -67,7 +63,6 @@
       pointer-events:none;
     }
 
-    /* Result overlay */
     .game #result{
       position:absolute;
       inset:0;
@@ -80,7 +75,6 @@
       backdrop-filter:blur(4px);
     }
 
-    /* MENU inside game */
     .game #menu.menu{
       position:absolute;
       left:50%;
@@ -114,9 +108,7 @@
     }
     @keyframes floatQ{50%{transform:translateY(-12px)}}
 
-    /* START BUTTON — HARD CENTER + correct hover */
     .game #menu #1player.menuOption{
-      /* kill old styles.css padding weirdness */
       padding:0 !important;
       margin:0 !important;
       border-width:2px !important;
@@ -125,13 +117,13 @@
       align-items:center !important;
       justify-content:center !important;
 
-      width:320px;           /* fixed width prevents off-center feel */
-      height:64px;           /* fixed height centers text vertically */
+      width:320px;
+      height:64px;
 
       font-size:1.35rem;
       font-weight:700;
       letter-spacing:1px;
-      line-height:1 !important; /* prevents vertical drift */
+      line-height:1 !important;
 
       border-radius:12px;
       border:2px solid #00fff0 !important;
@@ -158,15 +150,16 @@
         0 0 110px rgba(0,255,240,.85);
     }
 
-    .game #menu #1player.menuOption:active{
-      transform:scale(0.98);
-    }
+    .game #menu #1player.menuOption:active{transform:scale(0.98);}
   </style>
 </head>
 
 <body>
   <div class="background"></div>
   <div class="sprinkles" id="sprinkles"></div>
+
+  <!-- ✅ MUSIC (same file you already have in root) -->
+  <audio id="bgMusic" src="../question.mp3" loop preload="auto"></audio>
 
   <div class="container">
     <div class="game">
@@ -196,6 +189,7 @@
   </div>
 
   <script>
+    // Sprinkles
     const sprinkles = document.getElementById('sprinkles');
     for (let i = 0; i < 50; i++) {
       const s = document.createElement('div');
@@ -204,6 +198,23 @@
       s.style.animationDelay = Math.random() * 6 + 's';
       sprinkles.appendChild(s);
     }
+
+    // ✅ Try autoplay on load; if blocked, start on first user interaction
+    const bgMusic = document.getElementById('bgMusic');
+    bgMusic.volume = 0.55;
+
+    function tryPlay() {
+      bgMusic.play().catch(() => {});
+    }
+    window.addEventListener('load', tryPlay);
+
+    const unlock = () => {
+      tryPlay();
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true });
   </script>
 
   <script type="module" src="../js/index.js"></script>
