@@ -1,229 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>The Dangerous game</title>
 
-  <!-- KEEP existing game CSS (do not change game rectangle rules here) -->
   <link rel="stylesheet" href="../css/styles.css" />
-
-  <!-- Match question.html vibe -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
 
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *{margin:0;padding:0;box-sizing:border-box}
 
-    body {
-      height: 100vh;
-      overflow: hidden;
-      font-family: 'Orbitron', sans-serif;
-      background: radial-gradient(circle at top, #0e1a2f, #05070c);
-      color: #00fff0;
+    body{
+      height:100vh;
+      overflow:hidden;
+      font-family:'Orbitron',sans-serif;
+      background:radial-gradient(circle at top,#0e1a2f,#05070c);
+      color:#00fff0;
     }
 
-    /* BACKGROUND GRID */
-    .background {
-      position: fixed;
-      inset: 0;
+    .background{
+      position:fixed;inset:0;
       background:
-        repeating-linear-gradient(0deg, rgba(0,255,255,.06) 0 1px, transparent 1px 36px),
-        repeating-linear-gradient(90deg, rgba(0,255,255,.06) 0 1px, transparent 1px 36px);
-      animation: grid 12s linear infinite;
-      z-index: 0;
+        repeating-linear-gradient(0deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px),
+        repeating-linear-gradient(90deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px);
+      animation:grid 12s linear infinite;
+      z-index:0;
     }
-    @keyframes grid { to { background-position: 0 36px, 36px 0; } }
+    @keyframes grid{to{background-position:0 36px,36px 0}}
 
-    /* SPRINKLES */
-    .sprinkles { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
-    .sprinkle {
-      position: absolute;
-      width: 4px; height: 4px;
-      background: #00fff0;
-      box-shadow: 0 0 12px #00fff0, 0 0 30px #00fff0;
-      animation: float 6s linear infinite;
+    .sprinkles{position:fixed;inset:0;pointer-events:none;z-index:1}
+    .sprinkle{
+      position:absolute;
+      width:4px;height:4px;
+      background:#00fff0;
+      box-shadow:0 0 12px #00fff0,0 0 30px #00fff0;
+      animation:float 6s linear infinite;
     }
-    @keyframes float {
-      from { transform: translateY(100vh); opacity: 0; }
-      to   { transform: translateY(-10vh); opacity: 1; }
-    }
-
-    /* Hide old keymapping section */
-    .information { display: none !important; }
-
-    /* Layering: keep overlays above canvas */
-    .container { position: relative; z-index: 2; }
-    .game { position: relative; }
-    #gameWindow { position: relative; z-index: 1; }
-
-    /* HUD overlay: starts hidden (JS shows it after start) */
-    #hud {
-      position: absolute !important;
-      top: 20px !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      width: calc(100% - 40px);
-      max-width: 1024px;
-      z-index: 50;
-      pointer-events: none;
-      display: none; /* JS will show */
-      justify-content: space-between;
-      align-items: center;
+    @keyframes float{
+      from{transform:translateY(100vh);opacity:0}
+      to{transform:translateY(-10vh);opacity:1}
     }
 
-    /* Result overlay */
-    #result {
-      position: absolute !important;
-      inset: 0 !important;
-      display: none; /* JS controls this */
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(4px);
-      z-index: 60;
-      pointer-events: auto;
+    .information{display:none !important;}
+
+    .container{position:relative;z-index:2;}
+    .game{position:relative;}
+    #gameWindow{position:relative;z-index:1;}
+
+    #hud{display:none;}
+    #result{display:none;}
+
+    .game #hud{
+      position:absolute;
+      top:20px;
+      left:50%;
+      transform:translateX(-50%);
+      width:calc(100% - 40px);
+      max-width:1024px;
+      z-index:50;
+      pointer-events:none;
     }
 
-    /* MENU: centered inside game rectangle */
-    #menu.menu {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 22px;
-      text-align: center;
-      background: transparent;
-      z-index: 9999;
+    .game #result{
+      position:absolute;
+      inset:0;
+      z-index:60;
+      pointer-events:auto;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.55);
+      backdrop-filter:blur(4px);
     }
 
-    .menuTitle {
-      font-size: 10rem;
-      font-weight: 700;
-      letter-spacing: 3px;
-      color: #00fff0;
+    .game #menu.menu{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      width:auto;height:auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:26px;
+      background:transparent;
+      z-index:9999;
+      pointer-events:auto;
+      text-align:center;
+      padding:0;
+    }
+
+    .menuTitle{
+      font-size:5.2rem;
+      font-weight:700;
+      letter-spacing:3px;
+      color:#00fff0;
       text-shadow:
         0 0 12px rgba(0,255,240,1),
-        0 0 36px rgba(0,255,240,.9),
-        0 0 90px rgba(0,255,240,.7);
-      animation: floatQ 3s ease-in-out infinite;
-      pointer-events: none;
+        0 0 42px rgba(0,255,240,.95),
+        0 0 110px rgba(0,255,240,.75);
+      animation:floatQ 3s ease-in-out infinite;
+      pointer-events:none;
+      line-height:1.05;
     }
-    @keyframes floatQ { 50% { transform: translateY(-12px); } }
+    @keyframes floatQ{50%{transform:translateY(-12px)}}
 
-    /* START button: black bg + neon text, hover neon bg + black text */
-    #1player.menuOption {
-      position: relative; /* ✅ for radiators */
-      display: flex;
-      align-items: center;  /* ✅ center text vertically */
-      justify-content: center; /* ✅ center text horizontally */
+    .game #menu #1player.menuOption{
+      padding:0 !important;
+      margin:0 !important;
+      border-width:2px !important;
 
-      min-width: 280px;
-      padding: 18px 58px;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
 
-      font-size: 7rem;
-      font-weight: 700;
-      letter-spacing: 1px;
+      width:320px;
+      height:64px;
 
-      border-radius: 10px;
-      border: 2px solid #00fff0;
+      font-size:1.35rem;
+      font-weight:700;
+      letter-spacing:1px;
+      line-height:1 !important;
 
-      cursor: pointer;
-      user-select: none;
+      border-radius:12px;
+      border:2px solid #00fff0 !important;
 
-      background: rgba(0,0,0,0.88);
-      color: #00fff0;
+      cursor:pointer;
+      user-select:none;
+
+      background:rgba(0,0,0,.92) !important;
+      color:#00fff0 !important;
 
       box-shadow:
         0 0 18px rgba(0,255,240,.9),
-        0 0 55px rgba(0,255,240,.35);
+        0 0 65px rgba(0,255,240,.35);
 
-      transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+      transition:transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
     }
 
-    #1player.menuOption:hover {
-      background: #00fff0;
-      color: #000;
-      transform: translateY(-2px) scale(1.05);
+    .game #menu #1player.menuOption:hover{
+      background:linear-gradient(135deg,#00fff0,#00b3ff) !important;
+      color:#000 !important;
+      transform:translateY(-2px) scale(1.05);
       box-shadow:
         0 0 30px rgba(0,255,240,1),
-        0 0 95px rgba(0,255,240,.85);
+        0 0 110px rgba(0,255,240,.85);
     }
 
-    #1player.menuOption:active { transform: scale(0.98); }
-
-    /* Hide 2-player if it exists anywhere */
-    #2players { display: none !important; }
-
-    /* ===================== RADIATORS (same idea as question.html) ===================== */
-    .radiators{
-      position:absolute;
-      inset:-32px;
-      pointer-events:none;
-      opacity:0;
-      transition:opacity .12s linear;
-    }
-    .radiators.on{ opacity:1; }
-
-    .rside{
-      position:absolute;
-      display:flex;
-      gap:2px;
-      opacity:.95;
-    }
-
-    .rside.top{
-      left:18px; right:18px; top:0;
-      height:28px;
-      align-items:flex-end;
-      justify-content:space-between;
-    }
-    .rside.bottom{
-      left:18px; right:18px; bottom:0;
-      height:28px;
-      align-items:flex-start;
-      justify-content:space-between;
-    }
-    .rbarV{
-      width:1px;
-      height:2px;
-      background:#00fff0;
-      box-shadow:0 0 8px rgba(0,255,240,.85);
-      transform-origin:bottom;
-      transform:scaleY(.08);
-    }
-    .rbarV.down{ transform-origin:top; }
-
-    .rside.left{
-      top:18px; bottom:18px; left:0;
-      width:28px;
-      flex-direction:column;
-      align-items:flex-end;
-      justify-content:space-between;
-    }
-    .rside.right{
-      top:18px; bottom:18px; right:0;
-      width:28px;
-      flex-direction:column;
-      align-items:flex-start;
-      justify-content:space-between;
-    }
-    .rbarH{
-      height:1px;
-      width:2px;
-      background:#00fff0;
-      box-shadow:0 0 8px rgba(0,255,240,.85);
-      transform-origin:right;
-      transform:scaleX(.08);
-    }
-    .rbarH.right{ transform-origin:left; }
-    /* ================================================================================ */
+    .game #menu #1player.menuOption:active{transform:scale(0.98);}
   </style>
 </head>
 
@@ -231,21 +158,20 @@
   <div class="background"></div>
   <div class="sprinkles" id="sprinkles"></div>
 
-  <!-- ✅ Entry music -->
-  <audio id="bgMusic" src="entry_glass.mp3" loop></audio>
+  <!-- ✅ MUSIC (same file you already have in root) -->
+  <audio id="bgMusic" src="entry_glass.mp3" loop preload="auto"></audio>
 
   <div class="container">
     <div class="game">
       <canvas id="gameWindow"></canvas>
 
-      <!-- HUD overlay -->
       <div id="hud" class="hud">
         <div class="healthLayout">
           <div class="remainingHealthbar"></div>
           <div id="playerHealth" class="totalHealthBar"></div>
         </div>
 
-        <div id="timer" class="timer"> -- </div>
+        <div id="timer" class="timer">--</div>
 
         <div class="healthLayout">
           <div class="remainingHealthbar"></div>
@@ -253,10 +179,8 @@
         </div>
       </div>
 
-      <!-- Result overlay -->
-      <div id="result" class="result">result</div>
+      <div id="result" class="result"></div>
 
-      <!-- Menu overlay -->
       <div id="menu" class="menu">
         <div class="menuTitle">THE DANGEROUS GAME</div>
         <div id="1player" class="menuOption">Start Game</div>
@@ -274,9 +198,25 @@
       s.style.animationDelay = Math.random() * 6 + 's';
       sprinkles.appendChild(s);
     }
+
+    // ✅ Try autoplay on load; if blocked, start on first user interaction
+    const bgMusic = document.getElementById('bgMusic');
+    bgMusic.volume = 0.55;
+
+    function tryPlay() {
+      bgMusic.play().catch(() => {});
+    }
+    window.addEventListener('load', tryPlay);
+
+    const unlock = () => {
+      tryPlay();
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('keydown', unlock, { once: true });
   </script>
 
   <script type="module" src="../js/index.js"></script>
 </body>
-
 </html>
