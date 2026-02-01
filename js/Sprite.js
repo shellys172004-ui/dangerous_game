@@ -1,4 +1,4 @@
-#import Fighter from './Fighter.js'
+import Fighter from './Fighter.js'
 
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
