@@ -22,10 +22,27 @@ function start() {
 
 function controls() {
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'a') { player.keys.left.pressed = true; player.lastKey = 'left' }
-    if (e.key === 'd') { player.keys.right.pressed = true; player.lastKey = 'right' }
-    if (e.key === 'w') { if (!player.inTheAir) player.velocity.y = -20 }
-    if (e.key === ' ') { player.attack(enemy) }
+    // IMPORTANT: stop browser scrolling (space/arrow keys)
+    if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault()
+    }
+
+    if (e.key === 'a') {
+      player.keys.left.pressed = true
+      player.lastKey = 'left'
+    }
+    if (e.key === 'd') {
+      player.keys.right.pressed = true
+      player.lastKey = 'right'
+    }
+    if (e.key === 'w') {
+      e.preventDefault()
+      if (!player.inTheAir) player.velocity.y = -20
+    }
+    if (e.key === ' ') {
+      e.preventDefault()
+      player.attack(enemy)
+    }
   })
 
   window.addEventListener('keyup', (e) => {
@@ -36,14 +53,26 @@ function controls() {
 
 function enemyAI() {
   if (enemy.health <= 0) return
+
   const dist = player.position.x - enemy.position.x
   const abs = Math.abs(dist)
-  const speed = 2.5
+  const speed = 2.2
 
-  if (abs > 140) enemy.velocity.x = dist > 0 ? speed : -speed
-  else {
-    enemy.velocity.x = 0
-    if (enemy.attackCooldown && enemy.isHitting(player)) enemy.attack(player)
+  // move closer until in “fight range”
+  if (abs > 140) {
+    enemy.velocity.x = dist > 0 ? speed : -speed
+    enemy.switchSprite('run')
+    return
+  }
+
+  // stop in range
+  enemy.velocity.x = 0
+
+  // attack only if actually hitting + cooldown ready
+  if (enemy.attackCooldown && enemy.isHitting(player)) {
+    enemy.attack(player)
+  } else {
+    enemy.switchSprite('idle')
   }
 }
 
@@ -54,6 +83,7 @@ function animate() {
   background.update()
   shop.update()
 
+  // reset x each frame; movement()/AI will set it
   player.velocity.x = 0
   enemy.velocity.x = 0
 
