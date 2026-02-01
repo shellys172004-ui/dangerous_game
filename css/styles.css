@@ -126,7 +126,6 @@ body {
     margin-bottom: 10px;
     cursor: pointer;
     transition: color .3s ease-in-out, box-shadow .3s ease-in-out;
-    background: rgba(0,0,0,0.88) !important;
     color: #00fff0 !important;
 
     box-shadow:
