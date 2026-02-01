@@ -51,18 +51,42 @@
       to   { transform: translateY(-10vh); opacity: 1; }
     }
 
-    /* Don't show the old keymapping area */
+    /* Don’t show old keymapping section */
     .information { display: none !important; }
 
-    /* ---- MENU: centered INSIDE the game rectangle, not the whole page ---- */
-    .game { position: relative; } /* anchor for menu */
+    /* IMPORTANT: layer fixes (HUD/result ABOVE canvas) */
+    .container { position: relative; z-index: 2; }
 
+    /* make sure game wrapper can be an anchor for overlays */
+    .game { position: relative; }
+
+    /* canvas stays base layer */
+    #gameWindow { position: relative; z-index: 1; }
+
+    /* HUD overlay (above canvas) */
+    #hud {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      z-index: 50;
+      pointer-events: none; /* so it never blocks gameplay */
+    }
+
+    /* Result overlay (YOU WON/LOST + retry) */
+    #result {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      pointer-events: auto; /* so retry button is clickable */
+    }
+
+    /* MENU: centered INSIDE the game rectangle */
     #menu.menu {
       position: absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      z-index: 9999;
+      z-index: 70;
 
       display: flex;
       flex-direction: column;
@@ -95,7 +119,7 @@
       align-items: center;
       justify-content: center;
 
-      min-width: 260px;
+      min-width: 280px;
       padding: 18px 58px;
 
       font-size: 1.25rem;
@@ -128,7 +152,7 @@
 
     #1player.menuOption:active { transform: scale(0.98); }
 
-    /* Hide 2-player option if it exists in older HTML/CSS */
+    /* Hide 2-player button if any older CSS/HTML still references it */
     #2players { display: none !important; }
   </style>
 </head>
@@ -138,33 +162,33 @@
   <div class="sprinkles" id="sprinkles"></div>
 
   <div class="container">
-
-    <!-- MENU: only title + one button -->
-    <div id="menu" class="menu">
-      <div class="menuTitle">The Dangerous game</div>
-      <div id="1player" class="menuOption">Start Game</div>
-    </div>
-
-    <!-- HUD stays as your game expects (DON'T FORCE HIDE/SHOW HERE) -->
-    <div id="hud" class="hud">
-      <div class="healthLayout">
-        <div class="remainingHealthbar"></div>
-        <div id="playerHealth" class="totalHealthBar"></div>
-      </div>
-
-      <div id="timer" class="timer"> -- </div>
-
-      <div class="healthLayout">
-        <div class="remainingHealthbar"></div>
-        <div id="enemyHealth" class="totalHealthBar"></div>
-      </div>
-    </div>
-
-    <div id="result" class="result">result</div>
-
     <!-- GAME RECTANGLE: untouched -->
     <div class="game">
       <canvas id="gameWindow"></canvas>
+
+      <!-- HUD overlay (must be inside .game so it sits above canvas) -->
+      <div id="hud" class="hud">
+        <div class="healthLayout">
+          <div class="remainingHealthbar"></div>
+          <div id="playerHealth" class="totalHealthBar"></div>
+        </div>
+
+        <div id="timer" class="timer"> -- </div>
+
+        <div class="healthLayout">
+          <div class="remainingHealthbar"></div>
+          <div id="enemyHealth" class="totalHealthBar"></div>
+        </div>
+      </div>
+
+      <!-- Result overlay -->
+      <div id="result" class="result">result</div>
+
+      <!-- Menu overlay -->
+      <div id="menu" class="menu">
+        <div class="menuTitle">The Dangerous game</div>
+        <div id="1player" class="menuOption">Start Game</div>
+      </div>
     </div>
   </div>
 
@@ -180,8 +204,7 @@
     }
   </script>
 
-  <!-- IMPORTANT: do NOT add any click handler here.
-       index.js already does start/hud/result/win/lose/retry. -->
+  <!-- IMPORTANT: no click handlers here. index.js controls the game flow. -->
   <script type="module" src="../js/index.js"></script>
 </body>
 
