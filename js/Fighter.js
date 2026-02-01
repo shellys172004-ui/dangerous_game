@@ -24,11 +24,12 @@ class Fighter extends Sprite {
 
     this.name = name
     this.velocity = { x: 0, y: 0 }
-    this.moveFactor = 6
-    this.lastKey = null
 
     this.width = 50
     this.height = 150
+
+    this.moveFactor = 6
+    this.lastKey = null
 
     this.inTheAir = false
     this.isAttacking = false
@@ -92,26 +93,30 @@ class Fighter extends Sprite {
     this.isAttacking = true
     this.switchSprite('attack1')
 
+    // hit check (simple)
     if (this.isHitting(enemyFighter)) {
       enemyFighter.health = Math.max(0, enemyFighter.health - 20)
       enemyFighter.isTakingHit = true
       enemyFighter.switchSprite('takeHit')
-      setTimeout(() => (enemyFighter.isTakingHit = false), 300)
+      setTimeout(() => (enemyFighter.isTakingHit = false), 250)
     }
 
-    setTimeout(() => (this.isAttacking = false), this.attackTime)
+    setTimeout(() => (this.isAttacking = false), this.attackTime || 400)
     setTimeout(() => (this.attackCooldown = true), 600)
   }
 
   update() {
     super.update()
 
+    // update attack box to follow fighter
     this.attackBox.position.x = this.position.x + this.attackBox.offSet.x
     this.attackBox.position.y = this.position.y
 
+    // apply movement
     this.position.x += this.velocity.x
     this.position.y += this.velocity.y
 
+    // ground + gravity
     if (this.position.y + this.height >= canvas.height - 96) {
       this.velocity.y = 0
       this.inTheAir = false
@@ -120,6 +125,11 @@ class Fighter extends Sprite {
       this.inTheAir = true
     }
 
+    // keep inside canvas horizontally
+    if (this.position.x < 0) this.position.x = 0
+    if (this.position.x > canvas.width - this.width) this.position.x = canvas.width - this.width
+
+    // idle fallback
     if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
       this.switchSprite('idle')
     }
