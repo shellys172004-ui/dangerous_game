@@ -123,16 +123,20 @@ class Fighter extends Sprite {
     } else {
       this.velocity.y += gravity
       this.inTheAir = true
+
+      // ✅ added: air animations
+      if (this.velocity.y < 0) this.switchSprite('jump')
+      else this.switchSprite('fall')
     }
 
     // keep inside canvas horizontally
     if (this.position.x < 0) this.position.x = 0
     if (this.position.x > canvas.width - this.width) this.position.x = canvas.width - this.width
 
-    // idle fallback
-    //if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
-      //this.switchSprite('idle')
-    }
+    // idle fallback intentionally disabled (handled in index.js)
+    // if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
+    //   this.switchSprite('idle')
+    // }
   }
 
   switchSprite(sprite) {
@@ -181,7 +185,8 @@ export const enemy = new Fighter({
     jump: { imageSrc: '/dangerous_game/assets/img/kenji/Jump.png', maxFrames: 2 },
     fall: { imageSrc: '/dangerous_game/assets/img/kenji/Fall.png', maxFrames: 2 },
     attack1: { imageSrc: '/dangerous_game/assets/img/kenji/Attack1.png', maxFrames: 4 },
-    takeHit: { imageSrc: '/dangerous_game/assets/img/kenji/Take hit white.png', maxFrames: 3 },
+    // ✅ changed: match filename casing (adjust if your repo differs)
+    takeHit: { imageSrc: '/dangerous_game/assets/img/kenji/Take Hit White.png', maxFrames: 3 },
     death: { imageSrc: '/dangerous_game/assets/img/kenji/Death.png', maxFrames: 7 }
   },
   keys: { left: { pressed: false }, right: { pressed: false } },
