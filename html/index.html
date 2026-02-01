@@ -2,76 +2,168 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="../css/styles.css">
-    <title>Fighting game</title>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>The Dangerous game</title>
+
+  <!-- Keep existing game CSS (DO NOT TOUCH game rectangle styles) -->
+  <link rel="stylesheet" href="../css/styles.css" />
+
+  <!-- Match question.html vibe -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Theme styles ONLY for page background + menu UI (not the canvas/game rectangle) -->
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Orbitron', sans-serif;
+      background: radial-gradient(circle at top, #0e1a2f, #05070c);
+      color: #00fff0;
+    }
+
+    /* BACKGROUND GRID */
+    .background {
+      position: fixed;
+      inset: 0;
+      background:
+        repeating-linear-gradient(0deg, rgba(0, 255, 255, .06) 0 1px, transparent 1px 36px),
+        repeating-linear-gradient(90deg, rgba(0, 255, 255, .06) 0 1px, transparent 1px 36px);
+      animation: grid 12s linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes grid {
+      to { background-position: 0 36px, 36px 0; }
+    }
+
+    /* SPRINKLES */
+    .sprinkles { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+    .sprinkle {
+      position: absolute;
+      width: 4px; height: 4px;
+      background: #00fff0;
+      box-shadow: 0 0 12px #00fff0, 0 0 30px #00fff0;
+      animation: float 6s linear infinite;
+    }
+    @keyframes float {
+      from { transform: translateY(100vh); opacity: 0; }
+      to   { transform: translateY(-10vh); opacity: 1; }
+    }
+
+    /* IMPORTANT:
+       Do NOT change canvas/game rectangle styles.
+       We only place the menu above it. */
+    .container { position: relative; z-index: 2; }
+
+    /* MENU OVERLAY */
+    #menu.menu {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      text-align: center;
+      padding: 24px;
+      background: rgba(5, 7, 12, 0.35);
+      backdrop-filter: blur(6px);
+    }
+
+    .menuTitle {
+      font-size: 2.3rem;
+      text-shadow: 0 0 25px #00fff0;
+      animation: floatQ 3s ease-in-out infinite;
+    }
+
+    @keyframes floatQ {
+      50% { transform: translateY(-10px); }
+    }
+
+    /* SINGLE START BUTTON */
+    #1player.menuOption {
+      padding: 14px 42px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, #00fff0, #00b3ff);
+      color: #000;
+      box-shadow: 0 0 40px #00fff0;
+      transition: transform .12s ease, filter .12s ease;
+      user-select: none;
+    }
+    #1player.menuOption:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    #1player.menuOption:active { transform: translateY(0px); filter: brightness(0.98); }
+
+    /* Hide anything we removed / don't want to show */
+    .information { display: none !important; }
+  </style>
 </head>
 
 <body>
 
-    <div class="container">
+  <!-- question.html-style background -->
+  <div class="background"></div>
+  <div class="sprinkles" id="sprinkles"></div>
 
-        <div id="menu" class="menu">
+  <div class="container">
 
-            <div class="title; animate-charcter">
-                Fighting Game!
-            </div>
-            <div class="options">
-                <div id="1player" class="menuOption">
-                    Player vs AI
-                </div>
-                <div id="2players" class="menuOption">
-                    Player vs Player
-                </div>
-            </div>
-            <div class="author">Made by Adrizen</div>
-        </div>
+    <!-- MENU: only title + one button -->
+    <div id="menu" class="menu">
+      <div class="menuTitle">The Dangerous game</div>
 
-        <div id="hud" class="hud">
-
-            <!-- Player's health -->
-            <div class="healthLayout">
-                <div class="remainingHealthbar"></div>
-                <!-- TODO: Arreglar nombre barras. La vida del jugador se reduzca hacia el timer. -->
-                <div id="playerHealth" class="totalHealthBar"></div>
-            </div>
-            <!-- Timer -->
-            <div id="timer" class="timer"> -- </div>
-
-            <!-- Enemy's health -->
-            <div class="healthLayout">
-                <div class="remainingHealthbar"></div> <!-- TODO: Arreglar nombre barras. -->
-                <div id="enemyHealth" class="totalHealthBar"></div>
-            </div>
-        </div>
-        <div id="result" class="result"> result </div>
-        <div class="game">
-            <canvas id="gameWindow"> </canvas>
-        </div>
-
+      <!-- Keep the SAME id="1player" because your JS uses it -->
+      <div id="1player" class="menuOption">Start Game</div>
     </div>
 
-    <div class="information">
-        <div class="keymapping">
-            <div class="keys">
-                <h1> Player 1 </h1>
-                <p> Movement: WASD </p>
-                <p> Attack: Spacebar </p>
-            </div>
-            <div class="keys">
-                <h1> Player 2 </h1>
-                <p> Movement: Arrow keys </p>
-                <p> Attack: Alt key (right) </p>
-            </div>
-        </div>
+    <!-- HUD stays exactly as your game expects -->
+    <div id="hud" class="hud">
+      <div class="healthLayout">
+        <div class="remainingHealthbar"></div>
+        <div id="playerHealth" class="totalHealthBar"></div>
+      </div>
+
+      <div id="timer" class="timer"> -- </div>
+
+      <div class="healthLayout">
+        <div class="remainingHealthbar"></div>
+        <div id="enemyHealth" class="totalHealthBar"></div>
+      </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"
-        integrity="sha512-VEBjfxWUOyzl0bAwh4gdLEaQyDYPvLrZql3pw1ifgb6fhEvZl9iDDehwHZ+dsMzA0Jfww8Xt7COSZuJ/slxc4Q=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script type="module" src="../js/index.js"> </script>
+    <div id="result" class="result"> result </div>
+
+    <!-- GAME RECTANGLE: untouched -->
+    <div class="game">
+      <canvas id="gameWindow"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    // Sprinkles like question.html
+    const sprinkles = document.getElementById('sprinkles');
+    for (let i = 0; i < 50; i++) {
+      const s = document.createElement('div');
+      s.className = 'sprinkle';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.animationDelay = Math.random() * 6 + 's';
+      sprinkles.appendChild(s);
+    }
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"
+    integrity="sha512-VEBjfxWUOyzl0bAwh4gdLEaQyDYPvLrZql3pw1ifgb6fhEvZl9iDDehwHZ+dsMzA0Jfww8Xt7COSZuJ/slxc4Q=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script type="module" src="../js/index.js"></script>
 </body>
 
 </html>
