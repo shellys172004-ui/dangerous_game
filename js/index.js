@@ -91,6 +91,43 @@ function updateHealthBars() {
   if (e) e.style.width = `${Math.max(0, enemy.health)}%`
 }
 
+function neonButtonHtml(label, id) {
+  return `
+    <button id="${id}" style="
+      width:240px;height:56px;
+      display:inline-flex;align-items:center;justify-content:center;
+
+      font-family:Orbitron, sans-serif;
+      font-size:1.1rem;font-weight:700;letter-spacing:1px;
+
+      cursor:pointer;
+      border-radius:12px;
+      border:2px solid #00fff0;
+
+      background:rgba(0,0,0,.92);
+      color:#00fff0;
+
+      box-shadow:0 0 18px rgba(0,255,240,.9), 0 0 65px rgba(0,255,240,.35);
+      transition:transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    ">${label}</button>
+  `
+}
+
+function wireNeonButton(btn) {
+  btn.onmouseenter = () => {
+    btn.style.background = 'linear-gradient(135deg,#00fff0,#00b3ff)'
+    btn.style.color = '#000'
+    btn.style.transform = 'translateY(-2px) scale(1.04)'
+    btn.style.boxShadow = '0 0 30px rgba(0,255,240,1), 0 0 110px rgba(0,255,240,.85)'
+  }
+  btn.onmouseleave = () => {
+    btn.style.background = 'rgba(0,0,0,.92)'
+    btn.style.color = '#00fff0'
+    btn.style.transform = 'none'
+    btn.style.boxShadow = '0 0 18px rgba(0,255,240,.9), 0 0 65px rgba(0,255,240,.35)'
+  }
+}
+
 function endGame(winnerText) {
   gameOver = true
 
@@ -104,21 +141,10 @@ function endGame(winnerText) {
 
   result.style.display = 'flex'
 
-  // WIN -> redirect
-  if (winnerText.includes('Won')) {
-    result.innerHTML = `
-      <div style="text-align:center; font-family:Orbitron, sans-serif; color:#00fff0;">
-        <h1 style="text-shadow:0 0 25px #00fff0; margin-bottom:10px;">${winnerText}</h1>
-        <p style="opacity:.9;">Redirecting...</p>
-      </div>
-    `
-    setTimeout(() => {
-      window.location.href = './question.html'
-    }, 2000)
-    return
-  }
+  const isWin = winnerText.includes('Won')
+  const btnId = isWin ? 'continueBtn' : 'retryBtn'
+  const btnLabel = isWin ? 'CONTINUE' : 'RETRY'
 
-  // LOSS -> neon themed retry (matches "You Lost" vibe)
   result.innerHTML = `
     <div style="text-align:center; font-family:Orbitron, sans-serif;">
       <h1 style="
@@ -127,46 +153,20 @@ function endGame(winnerText) {
         margin-bottom:18px;">
         ${winnerText}
       </h1>
-
-      <button id="retryBtn" style="
-        width:240px;
-        height:56px;
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-
-        font-family:Orbitron, sans-serif;
-        font-size:1.1rem;
-        font-weight:700;
-        letter-spacing:1px;
-
-        cursor:pointer;
-        border-radius:12px;
-        border:2px solid #00fff0;
-
-        background:rgba(0,0,0,.92);
-        color:#00fff0;
-
-        box-shadow:0 0 18px rgba(0,255,240,.9), 0 0 65px rgba(0,255,240,.35);
-        transition:transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
-      ">RETRY</button>
+      ${neonButtonHtml(btnLabel, btnId)}
     </div>
   `
 
-  const btn = document.getElementById('retryBtn')
-  btn.onmouseenter = () => {
-    btn.style.background = 'linear-gradient(135deg,#00fff0,#00b3ff)'
-    btn.style.color = '#000'
-    btn.style.transform = 'translateY(-2px) scale(1.04)'
-    btn.style.boxShadow = '0 0 30px rgba(0,255,240,1), 0 0 110px rgba(0,255,240,.85)'
+  const btn = document.getElementById(btnId)
+  wireNeonButton(btn)
+
+  if (isWin) {
+    btn.onclick = () => {
+      window.location.href = './question.html'
+    }
+  } else {
+    btn.onclick = () => location.reload()
   }
-  btn.onmouseleave = () => {
-    btn.style.background = 'rgba(0,0,0,.92)'
-    btn.style.color = '#00fff0'
-    btn.style.transform = 'none'
-    btn.style.boxShadow = '0 0 18px rgba(0,255,240,.9), 0 0 65px rgba(0,255,240,.35)'
-  }
-  btn.onclick = () => location.reload()
 }
 
 function animate() {
