@@ -4,129 +4,36 @@ import { background, shop } from './Sprite.js'
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
-console.log('✅ PVE index.js running', window.location.href)
+let gameStarted = false
 
-let timer = 30
-let timerID = null
-let gameEnded = false
-let started = false
+document.getElementById('1player').addEventListener('click', start)
+document.getElementById('2players').addEventListener('click', start) // for now same
 
-const onePlayer = document.getElementById('1player')
-const twoPlayers = document.getElementById('2players')
-
-// Player vs AI only: both buttons can start same mode for now
-onePlayer.addEventListener('click', startGame)
-twoPlayers.addEventListener('click', startGame)
-
-function resetMatch() {
-  timer = 30
-  gameEnded = false
-  if (timerID) clearTimeout(timerID)
-
-  const resultDiv = document.querySelector('#result')
-  if (resultDiv) {
-    resultDiv.style.display = 'none'
-    resultDiv.innerHTML = ''
-  }
-  const timerEl = document.querySelector('#timer')
-  if (timerEl) timerEl.innerHTML = timer
-
-  // reset fighters
-  player.health = 100
-  enemy.health = 100
-
-  player.position.x = 100
-  player.position.y = 0
-  enemy.position.x = 750
-  enemy.position.y = 0
-
-  player.velocity.x = 0
-  player.velocity.y = 0
-  enemy.velocity.x = 0
-  enemy.velocity.y = 0
-
-  player.isAttacking = false
-  enemy.isAttacking = false
-  player.isTakingHit = false
-  enemy.isTakingHit = false
-
-  player.attackCooldown = true
-  enemy.attackCooldown = true
-
-  player.switchSprite('idle')
-  enemy.switchSprite('idle')
-
-  // reset player key states
-  if (player.keys?.a) player.keys.a.pressed = false
-  if (player.keys?.d) player.keys.d.pressed = false
-}
-
-function startGame() {
-  resetMatch()
-
+function start() {
   document.getElementById('menu').style.display = 'none'
   document.getElementById('hud').style.display = 'flex'
 
-  if (!started) {
-    started = true
-    attachControls()
+  if (!gameStarted) {
+    gameStarted = true
+    controls()
     animate()
   }
-
-  decreaseTimer()
 }
 
-function decreaseTimer() {
-  if (gameEnded) return
-  if (timer > 0) {
-    timerID = setTimeout(decreaseTimer, 1000)
-    timer--
-    document.querySelector('#timer').innerHTML = timer
-  } else {
-    determineWinner()
-  }
-}
-
-function attachControls() {
+function controls() {
   window.addEventListener('keydown', (e) => {
-    if (gameEnded) return
-
-    if (e.key === 'a') {
-      player.keys.a.pressed = true
-      player.lastKey = 'a'
-    }
-    if (e.key === 'd') {
-      player.keys.d.pressed = true
-      player.lastKey = 'd'
-    }
-    if (e.key === 'w') {
-      if (!player.inTheAir) player.velocity.y = -20
-    }
-    if (e.key === ' ') {
-      triggerAttack(player, enemy)
-    }
+    if (e.key === 'a') { player.keys.left.pressed = true; player.lastKey = 'left' }
+    if (e.key === 'd') { player.keys.right.pressed = true; player.lastKey = 'right' }
+    if (e.key === 'w') { if (!player.inTheAir) player.velocity.y = -20 }
+    if (e.key === ' ') { player.attack(enemy) }
   })
 
   window.addEventListener('keyup', (e) => {
-    if (e.key === 'a') player.keys.a.pressed = false
-    if (e.key === 'd') player.keys.d.pressed = false
+    if (e.key === 'a') player.keys.left.pressed = false
+    if (e.key === 'd') player.keys.right.pressed = false
   })
 }
 
-function triggerAttack(attacker, target) {
-  if (attacker.health <= 0) return
-  if (!attacker.attackCooldown) return
-
-  attacker.isAttacking = true
-  attacker.attack(target)
-
-  const ms = attacker.attackTime || 400
-  setTimeout(() => {
-    attacker.isAttacking = false
-  }, ms)
-}
-
-// ✅ AI (NO .movement() call anywhere)
 function enemyAI() {
   if (enemy.health <= 0) return
 
@@ -136,19 +43,14 @@ function enemyAI() {
 
   if (abs > 140) {
     enemy.velocity.x = dist > 0 ? speed : -speed
-    if (!enemy.isAttacking && !enemy.isTakingHit && !enemy.inTheAir) enemy.switchSprite('run')
+    enemy.switchSprite('run')
   } else {
     enemy.velocity.x = 0
-    if (enemy.attackCooldown && enemy.isHitting(player)) {
-      triggerAttack(enemy, player)
-    } else if (!enemy.isAttacking && !enemy.isTakingHit && !enemy.inTheAir) {
-      enemy.switchSprite('idle')
-    }
+    if (enemy.attackCooldown && enemy.isHitting(player)) enemy.attack(player)
   }
 }
 
 function animate() {
-  if (gameEnded) return
   requestAnimationFrame(animate)
 
   c.clearRect(0, 0, canvas.width, canvas.height)
@@ -156,45 +58,13 @@ function animate() {
   background.update()
   shop.update()
 
-  // player
+  // Reset x then apply movement/AI
   player.velocity.x = 0
+  enemy.velocity.x = 0
+
   player.movement()
-  player.update()
-
-  // enemy AI
   enemyAI()
+
+  player.update()
   enemy.update()
-
-  // idle fallback
-  if (!player.movement() && !player.isAttacking && !player.isTakingHit && !player.inTheAir) {
-    player.switchSprite('idle')
-  }
-
-  // end condition
-  if (player.health <= 0 || enemy.health <= 0) {
-    determineWinner()
-  }
-}
-
-function determineWinner() {
-  if (gameEnded) return
-  gameEnded = true
-  if (timerID) clearTimeout(timerID)
-
-  const resultDiv = document.querySelector('#result')
-  resultDiv.style.display = 'flex'
-
-  if (player.health === enemy.health) {
-    resultDiv.innerHTML = 'Tie!'
-  } else if (player.health > enemy.health) {
-    resultDiv.innerHTML = 'Congratulations, you won!'
-    enemy.switchSprite('death')
-
-    setTimeout(() => {
-      window.location.href = 'question.html'
-    }, 2000)
-  } else {
-    resultDiv.innerHTML = 'Enemy won!'
-    player.switchSprite('death')
-  }
 }
