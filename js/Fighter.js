@@ -52,6 +52,7 @@ class Fighter extends Sprite {
   }
 
   isHitting(enemyFighter) {
+      if (!this.isAttacking) return false
     return (
       this.attackBox.position.x + this.attackBox.width >= enemyFighter.position.x &&
       this.attackBox.position.x <= enemyFighter.position.x + enemyFighter.width &&
@@ -71,7 +72,11 @@ class Fighter extends Sprite {
 
   // hit check
   if (this.isHitting(enemyFighter)) {
-    enemyFighter.health = Math.max(0, enemyFighter.health - 20)
+    enemyFighter.health = Math.max(
+  0,
+  enemyFighter.health - (this.name === 'enemy' ? 8 : 20)
+)
+
     enemyFighter.isTakingHit = true
     enemyFighter.switchSprite('takeHit')
 
