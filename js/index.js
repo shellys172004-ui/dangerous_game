@@ -1,134 +1,280 @@
 import { player, enemy } from './Fighter.js'
-import { background, shop } from './Sprite.js';
-import { loadKeyDownEvents, loadkeyUpEvents } from './Keys.js'
+import { background, shop } from './Sprite.js'
 
-const canvas = document.querySelector('canvas');
-const c = canvas.getContext('2d');
-let timer = 30; // Game timer.
-let timerID;    // Used to clearTimeout.
-let gameEnded = false;  // Flag to determinate whenever game's has ended or not.
-// TODO: Reset button.
+const canvas = document.querySelector('canvas')
+const c = canvas.getContext('2d')
 
-loadKeyDownEvents(player, enemy);   // Load player and enemy KeyDown events.
-loadkeyUpEvents(player, enemy);     // Load player and enemy KeyUp events.
+let timer = 30
+let timerID
+let gameEnded = false
+let mode = 'pvp' // 'pve' = Player vs AI, 'pvp' = Player vs Player
 
-const onePlayer = document.getElementById('1player');
-const twoPlayers = document.getElementById('2players');
-onePlayer.addEventListener("click", () => {
-    intervalBot();
-    startGame();
-});
-twoPlayers.addEventListener("click", () => {
-    startGame();
-});
+// Menu buttons
+const onePlayer = document.getElementById('1player')
+const twoPlayers = document.getElementById('2players')
 
-// Main function to start the game after the menu is dismissed.
+onePlayer.addEventListener('click', () => {
+  mode = 'pve'
+  resetMatch()
+  startGame()
+})
+
+twoPlayers.addEventListener('click', () => {
+  mode = 'pvp'
+  resetMatch()
+  startGame()
+})
+
+function resetMatch() {
+  // reset timer/UI flags
+  timer = 30
+  gameEnded = false
+  clearTimeout(timerID)
+  const resultDiv = document.querySelector('#result')
+  if (resultDiv) {
+    resultDiv.style.display = 'none'
+    resultDiv.innerHTML = ''
+  }
+  const timerEl = document.querySelector('#timer')
+  if (timerEl) timerEl.innerHTML = timer
+
+  // reset fighters (basic)
+  player.health = 100
+  enemy.health = 100
+  player.isAttacking = false
+  enemy.isAttacking = false
+  player.isTakingHit = false
+  enemy.isTakingHit = false
+  player.attackCooldown = true
+  enemy.attackCooldown = true
+
+  // positions
+  player.position.x = 100
+  player.position.y = 0
+  enemy.position.x = 750
+  enemy.position.y = 0
+
+  // velocities
+  player.velocity.x = 0
+  player.velocity.y = 0
+  enemy.velocity.x = 0
+  enemy.velocity.y = 0
+
+  // keys reset
+  if (player.keys?.a) player.keys.a.pressed = false
+  if (player.keys?.d) player.keys.d.pressed = false
+  if (player.keys?.w) player.keys.w.pressed = false
+  if (player.keys?.[' ']) player.keys[' '].pressed = false
+
+  if (enemy.keys?.ArrowLeft) enemy.keys.ArrowLeft.pressed = false
+  if (enemy.keys?.ArrowRight) enemy.keys.ArrowRight.pressed = false
+  if (enemy.keys?.ArrowUp) enemy.keys.ArrowUp.pressed = false
+  if (enemy.keys?.Control) enemy.keys.Control.pressed = false
+
+  // idle sprites
+  player.switchSprite('idle')
+  enemy.switchSprite('idle')
+
+  // HUD health bars reset (if present)
+  const pBar = document.getElementById('playerHealth')
+  const eBar = document.getElementById('enemyHealth')
+  if (pBar) pBar.style.width = '100%'
+  if (eBar) eBar.style.width = '100%'
+}
+
 function startGame() {
-    document.getElementById('menu').style.display = "none"; // Hide the menu.
-    c.fillRect(0, 0, canvas.width, canvas.height);          // Simulate loading with black screen lol
-    setTimeout(() => {
-    animate();          // Start recursive animate function.
-    decreaseTimer();    // Start the timer countdown.
-    document.getElementById('hud').style.display = "flex";  // Show the hud.
-    }, 1000)    // Wait 1 sec to start the game.
+  document.getElementById('menu').style.display = 'none'
+  document.getElementById('hud').style.display = 'flex'
+
+  // “loading” black flash
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  setTimeout(() => {
+    attachControlsForMode()
+    animate()
+    decreaseTimer()
+  }, 300)
 }
 
-// Decrease the timer. If it reaches 0 announce the winner based on remaining health.
+let controlsAttached = false
+function attachControlsForMode() {
+  if (controlsAttached) return
+  controlsAttached = true
+
+  // One global listener, but behavior depends on mode
+  window.addEventListener('keydown', (e) => {
+    if (gameEnded) return
+
+    // In PVE: ONLY player controls are active
+    // In PVP: both work (optional; you can remove enemy controls if you want only PVE now)
+
+    // PLAYER controls
+    if (e.key === 'a') {
+      player.keys.a.pressed = true
+      player.lastKey = 'a'
+    } else if (e.key === 'd') {
+      player.keys.d.pressed = true
+      player.lastKey = 'd'
+    } else if (e.key === 'w') {
+      if (!player.inTheAir) player.velocity.y = -20
+    } else if (e.key === ' ') {
+      triggerAttack(player, enemy)
+    }
+
+    // ENEMY controls only in PVP
+    if (mode === 'pvp') {
+      if (e.key === 'ArrowLeft') {
+        enemy.keys.ArrowLeft.pressed = true
+        enemy.lastKey = 'ArrowLeft'
+      } else if (e.key === 'ArrowRight') {
+        enemy.keys.ArrowRight.pressed = true
+        enemy.lastKey = 'ArrowRight'
+      } else if (e.key === 'ArrowUp') {
+        if (!enemy.inTheAir) enemy.velocity.y = -20
+      } else if (e.key === 'Control') {
+        triggerAttack(enemy, player)
+      }
+    }
+  })
+
+  window.addEventListener('keyup', (e) => {
+    // PLAYER
+    if (e.key === 'a') player.keys.a.pressed = false
+    if (e.key === 'd') player.keys.d.pressed = false
+
+    // ENEMY only in PVP
+    if (mode === 'pvp') {
+      if (e.key === 'ArrowLeft') enemy.keys.ArrowLeft.pressed = false
+      if (e.key === 'ArrowRight') enemy.keys.ArrowRight.pressed = false
+    }
+  })
+}
+
+function triggerAttack(attacker, target) {
+  if (attacker.health <= 0) return
+  if (!attacker.attackCooldown) return
+
+  // Original repo logic expects isAttacking true for attack() to do anything
+  attacker.isAttacking = true
+  attacker.attack(target)
+
+  // stop attack state after attackTime
+  const ms = attacker.attackTime || 400
+  setTimeout(() => {
+    attacker.isAttacking = false
+  }, ms)
+}
+
 function decreaseTimer() {
-    if (timer > 0) {
-        timerID = setTimeout(decreaseTimer, 1000);  // Call this function againg in 1 second.
-        timer--;
-        document.querySelector('#timer').innerHTML = timer; // Write the html with the new timer.
-    } else {    // Timer runs out, announce the winner.
-        determineWinner({ player, enemy, timerID });
-    }
+  if (gameEnded) return
+
+  if (timer > 0) {
+    timerID = setTimeout(decreaseTimer, 1000)
+    timer--
+    document.querySelector('#timer').innerHTML = timer
+  } else {
+    determineWinner()
+  }
 }
 
-// Animate the sprites every frame.
-function animate() {
-    window.requestAnimationFrame(animate);  // Set this as a recursive function.
-    background.update();
-    shop.update();
-    update(player);
-    update(enemy);
-    player.velocity.x = 0;  // Reset the "x" velocity of the player each frame. So it doesn't "slide" every frame.
-    enemy.velocity.x = 0;   // Same for the enemy.
+// AI: simple chase + attack in range
+function enemyAI() {
+  if (enemy.health <= 0) return
 
-    if (!player.movement() && !player.isAttacking && !player.isTakingHit) {  // If player is not running, set his sprite to idle.
-        player.switchSprite('idle');
-    }
+  // Decide direction based on distance
+  const dist = player.position.x - enemy.position.x
+  const abs = Math.abs(dist)
 
-    if (!enemy.movement() && !enemy.isAttacking && !enemy.isTakingHit) {    // If enemy is not running, set his sprite to idle.
-        enemy.switchSprite('idle')  // TODO: Disable enemy movement for arrow keys when playing VS IA.
-    }
+  // Movement speed
+  const speed = 2.5
 
-    // Check if a fighter is attacking.
-    player.attack(enemy);
-    enemy.attack(player);
+  if (abs > 140) {
+    enemy.velocity.x = dist > 0 ? speed : -speed
+    enemy.switchSprite('run')
+  } else {
+    enemy.velocity.x = 0
 
-    if (!gameEnded) {
-        if (enemy.health <= 0 || player.health <= 0) {
-            determineWinner({ player, enemy, timerID });
-        }
-    }
-}
-
-// Manages the behavior of the bot, his movement is completly random right now.
-function intervalBot() {
-    setInterval(botMoves, 1000);    // Evaluates if moving every 1 second.
-    setInterval(botAttack, 1000);   // Evaluates if attacking every 1 second.
-}
-
-// Bot moves randomly: a 45% chances of going forward, another 45% of going backward and a 10% of not moving. This every 1 second.
-// The period of time the bot is moving is random too: 'randomFloat * 4000'
-function botMoves() {
-    let randomFloat = Math.random();
-    //console.log(randomFloat)
-    if (randomFloat < 0.45) {   // Forwards.
-        window.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'ArrowLeft' }))
-        setTimeout(() => {
-            window.dispatchEvent(new KeyboardEvent('keyup', { 'key': 'ArrowLeft' }))
-        }, randomFloat * 3000)
-    } else if (randomFloat < 0.85) {    // Backwards.
-        window.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'ArrowRight' }))
-        setTimeout(() => {
-            window.dispatchEvent(new KeyboardEvent('keyup', { 'key': 'ArrowRight' }))
-        }, randomFloat * 3000)
-    }
-}
-
-// Bot attacks the player if in range and his cooldown is available.
-function botAttack() {
+    // Attack when close and cooldown ready
     if (enemy.attackCooldown && enemy.isHitting(player)) {
-        enemy.isAttacking = true;
-        enemy.attack(player);
-        setTimeout(() => { enemy.isAttacking = false; }, 1000)
+      triggerAttack(enemy, player)
+    } else if (!enemy.isAttacking && !enemy.isTakingHit && !enemy.inTheAir) {
+      enemy.switchSprite('idle')
     }
+  }
 }
 
-// Fighter is alive can perform any action, if it's not then only get drawn.
-function update(fighter) {
-    if (fighter.health > 0) {   // Allow movement and attacks only if player is alive.
-        fighter.update();
-    } else {    // If is not alive, then only draw the player on the screen.
-        fighter.animateFrames()
-        fighter.draw();
+// Main loop
+function animate() {
+  if (gameEnded) return
+  window.requestAnimationFrame(animate)
+
+  // clear frame (optional; if you see trails, uncomment)
+  // c.clearRect(0, 0, canvas.width, canvas.height)
+
+  background.update()
+  shop.update()
+
+  // Reset horizontal velocity each frame; movement() will set it for player in repo style
+  player.velocity.x = 0
+  if (mode === 'pvp') enemy.velocity.x = 0
+  else {
+    // in PVE, enemyAI sets enemy.velocity.x, so do NOT zero here
+  }
+
+  // Player update
+  player.movement()
+  player.update()
+
+  // Enemy update
+  if (mode === 'pvp') {
+    enemy.movement()
+    enemy.update()
+  } else {
+    enemyAI()
+    enemy.update()
+  }
+
+  // Idle fallback
+  if (!player.movement() && !player.isAttacking && !player.isTakingHit && !player.inTheAir) {
+    player.switchSprite('idle')
+  }
+
+  if (mode === 'pvp') {
+    if (!enemy.movement() && !enemy.isAttacking && !enemy.isTakingHit && !enemy.inTheAir) {
+      enemy.switchSprite('idle')
     }
+  }
+
+  // End condition
+  if (player.health <= 0 || enemy.health <= 0) {
+    determineWinner()
+  }
 }
 
-function determineWinner({ player, enemy, timerID }) {
-    clearTimeout(timerID);  // Stop the timer, the game ended.
-    gameEnded = true;
-    document.querySelector('#result').style.display = 'flex'    // Change from 'none' to 'flex'
-    if (player.health === enemy.health) {
-        document.querySelector('#result').innerHTML = 'Tie!';   // Player's and enemy's health are the same.
-    } else if (player.health > enemy.health) {
-        document.querySelector('#result').innerHTML = 'Player 1 won!'; // Player's health is greater.
-        enemy.health = 0;
-        enemy.switchSprite('death');
-    } else {
-        document.querySelector('#result').innerHTML = 'Player 2 won!'; // Enemy's health is greater.
-        player.health = 0;
-        player.switchSprite('death');
+function determineWinner() {
+  if (gameEnded) return
+  gameEnded = true
+  clearTimeout(timerID)
+
+  const resultDiv = document.querySelector('#result')
+  resultDiv.style.display = 'flex'
+
+  if (player.health === enemy.health) {
+    resultDiv.innerHTML = 'Tie!'
+  } else if (player.health > enemy.health) {
+    resultDiv.innerHTML = mode === 'pve' ? 'You won!' : 'Player 1 won!'
+    enemy.health = 0
+    enemy.switchSprite('death')
+
+    // OPTIONAL: PVE win => redirect
+    if (mode === 'pve') {
+      setTimeout(() => {
+        window.location.href = 'question.html'
+      }, 2000)
     }
+  } else {
+    resultDiv.innerHTML = mode === 'pve' ? 'Enemy won!' : 'Player 2 won!'
+    player.health = 0
+    player.switchSprite('death')
+  }
 }
