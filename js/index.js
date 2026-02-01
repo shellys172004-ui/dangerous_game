@@ -21,15 +21,14 @@ function start() {
 }
 
 function controls() {
-  // IMPORTANT for Firefox: passive:false so preventDefault works for Space
   window.addEventListener(
     'keydown',
     (e) => {
       // Stop page scroll for keys we use
-      if (e.key === ' ' || e.key === 'w') e.preventDefault()
+      if (e.code === 'Space' || e.key === 'w') e.preventDefault()
 
       // Avoid key-repeat spamming attack
-      if (e.key === ' ' && e.repeat) return
+      if (e.code === 'Space' && e.repeat) return
 
       if (e.key === 'a') {
         player.keys.left.pressed = true
@@ -42,7 +41,7 @@ function controls() {
       if (e.key === 'w') {
         if (!player.inTheAir) player.velocity.y = -20
       }
-      if (e.key === ' ') {
+      if (e.code === 'Space') {
         player.attack(enemy)
       }
     },
@@ -92,7 +91,7 @@ function animate() {
   player.update()
   enemy.update()
 
-  // ✅ choose animations HERE (not inside Fighter.update)
+  // choose animations HERE (not inside Fighter.update)
   if (!player.inTheAir && !player.isAttacking && !player.isTakingHit) {
     if (playerRunning) player.switchSprite('run')
     else player.switchSprite('idle')
