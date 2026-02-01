@@ -46,10 +46,13 @@ function attachControls() {
       }
 
       // attack
-      if (e.code === 'Space') {
-        e.preventDefault()
-        if (!e.repeat) player.attack(enemy)
-      }
+     if (e.code === 'Space' || e.key === ' ') {
+  e.preventDefault()
+  if (!player.isAttacking) {
+    player.attack(enemy)
+  }
+}
+
     },
     { passive: false }
   )
@@ -91,6 +94,8 @@ function updateHealthBars() {
 
 function endGame(winnerText) {
   gameOver = true
+  player.velocity.x = 0
+  enemy.velocity.x = 0
 
   document.getElementById('result').style.display = 'flex'
   document.getElementById('result').innerHTML = `
@@ -105,10 +110,20 @@ function endGame(winnerText) {
   document.getElementById('retryBtn').onclick = () => {
     location.reload()
   }
+  
 }
 
 function animate() {
   requestAnimationFrame(animate)
+  
+  if (gameOver) {
+    // freeze screen but still draw final frame
+    background.update()
+    shop.update()
+    player.update()
+    enemy.update()
+    return
+    
   c.clearRect(0, 0, canvas.width, canvas.height)
 
   background.update()
@@ -133,15 +148,17 @@ function animate() {
   enemy.update()
 
   // ✅ animation selection (no glitch)
-  if (!player.isAttacking && !player.isTakingHit) {
-    if (player.inTheAir) {
-      // jump/fall handled in Fighter.update()
-    } else if (player.velocity.x !== 0) {
-      player.switchSprite('run')
-    } else {
-      player.switchSprite('idle')
-    }
-  }
+  // PLAYER animation control
+if (player.isAttacking || player.isTakingHit) {
+  // DO NOTHING — let attack / hit animation finish
+} else if (player.inTheAir) {
+  // jump / fall handled in Fighter.update()
+} else if (player.velocity.x !== 0) {
+  player.switchSprite('run')
+} else {
+  player.switchSprite('idle')
+}
+
 
   if (!enemy.isAttacking && !enemy.isTakingHit) {
     if (enemy.inTheAir) {
