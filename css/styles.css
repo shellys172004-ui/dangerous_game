@@ -122,9 +122,9 @@ body {
     justify-content:center; 
     align-items:center;
     border: solid black;
-    border-width: 1px 5px 5px 1px;
+    border-width: 3px 3px 3px 3px;
     font-size: 60px;
-    padding: 10px 20px 5px 10px;
+    padding: 10px 5px 10px 5px;
     margin-top: 10px;
     margin-bottom: 10px;
     cursor: pointer;
