@@ -15,7 +15,6 @@ const controls = {
 }
 
 document.getElementById('1player').addEventListener('click', start)
-document.getElementById('2players').addEventListener('click', start)
 
 function start() {
   document.getElementById('menu').style.display = 'none'
