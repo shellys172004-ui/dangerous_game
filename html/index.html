@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -54,35 +53,18 @@
     /* Don’t show old keymapping section */
     .information { display: none !important; }
 
-    /* IMPORTANT: layer fixes (HUD/result ABOVE canvas) */
+    /* IMPORTANT: keep layers sane */
     .container { position: relative; z-index: 2; }
-
-    /* make sure game wrapper can be an anchor for overlays */
-    .game { position: relative; }
-
-    /* canvas stays base layer */
+    .game { position: relative; }   /* anchor overlays to the game rectangle */
     #gameWindow { position: relative; z-index: 1; }
 
-    /* HUD overlay (above canvas) */
-    #hud {
-      position: absolute;
-      inset: 0 auto auto 0;
-      width: 100%;
-      z-index: 50 !important;
-      pointer-events: none; /* so it never blocks gameplay */
-      display: none !important;
-    }
+    /* ✅ Hide HUD on front page (JS will enable it on start) */
+    #hud { display: none; }
 
-    /* Result overlay (YOU WON/LOST + retry) */
-    #result {
-      position: absolute;
-      inset: 0;
-      z-index: 60;
-      pointer-events: auto; /* so retry button is clickable */
-      display: none !important;
-    }
+    /* Result hidden initially (JS shows it on gameover) */
+    #result { display: none; }
 
-    /* MENU: centered INSIDE the game rectangle */
+    /* MENU: centered inside the game rectangle */
     #menu.menu {
       position: absolute;
       left: 50%;
@@ -96,9 +78,8 @@
       gap: 22px;
 
       text-align: center;
-      padding: 0;
       background: transparent;
-      z-index: 999999 !important;
+      z-index: 9999;
     }
 
     .menuTitle {
@@ -117,9 +98,9 @@
 
     /* Start button: BLACK bg + neon text, hover neon bg + black text */
     #1player.menuOption {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       min-width: 280px;
       padding: 18px 58px;
@@ -129,11 +110,12 @@
       letter-spacing: 1px;
 
       border-radius: 10px;
-      border: 2px solid #00fff0 !important;
+      border: 2px solid #00fff0;
+
       cursor: pointer;
 
-      background: rgba(0,0,0,0.88) !important;
-      color: #00fff0 !important;
+      background: rgba(0,0,0,0.88);
+      color: #00fff0;
 
       box-shadow:
         0 0 18px rgba(0,255,240,.9),
@@ -144,8 +126,8 @@
     }
 
     #1player.menuOption:hover {
-      background: linear-gradient(135deg, #00fff0, #00fff0) !important;
-      color: #000 !important;
+      background: #00fff0;
+      color: #000;
       transform: translateY(-2px) scale(1.05);
       box-shadow:
         0 0 30px rgba(0,255,240,1),
@@ -154,53 +136,40 @@
 
     #1player.menuOption:active { transform: scale(0.98); }
 
-    /* Hide 2-player button if any older CSS/HTML still references it */
-    #2players { display: none !important; }
-    /* ===== FORCE HUD + RESULT INTO GAME RECTANGLE ===== */
+    /* HUD overlay inside game */
+    #hud.hud {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
 
-/* anchor overlays to game */
-.game {
-  position: relative;
-}
+      width: calc(100% - 40px);
+      max-width: 1024px;
 
-/* HUD visible and aligned */
-#hud {
-  position: absolute !important;
-  top: 20px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+      justify-content: space-between;
+      align-items: center;
 
-  width: calc(100% - 40px);
-  max-width: 1024px;
+      z-index: 50;
+      pointer-events: none; /* never blocks the game */
+    }
 
-  display: flex !important;
-  justify-content: space-between;
-  align-items: center;
+    /* health blocks size */
+    .healthLayout { width: 40%; }
 
-  z-index: 50;
-  pointer-events: none;
-}
+    /* Result overlay on top of everything */
+    #result.result {
+      position: absolute;
+      inset: 0;
 
-/* Health bars visible */
-.healthLayout {
-  width: 40%;
-}
+      align-items: center;
+      justify-content: center;
 
-/* Result screen (You Won / Lost / Retry) */
-#result {
-  position: absolute !important;
-  inset: 0 !important;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
 
-  display: none; /* JS will enable it */
-  align-items: center;
-  justify-content: center;
-
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-
-  z-index: 60;
-}
-
+      z-index: 60;
+      pointer-events: auto; /* so retry button is clickable */
+    }
   </style>
 </head>
 
@@ -209,11 +178,10 @@
   <div class="sprinkles" id="sprinkles"></div>
 
   <div class="container">
-    <!-- GAME RECTANGLE: untouched -->
     <div class="game">
       <canvas id="gameWindow"></canvas>
 
-      <!-- HUD overlay (must be inside .game so it sits above canvas) -->
+      <!-- HUD overlay (inside .game) -->
       <div id="hud" class="hud">
         <div class="healthLayout">
           <div class="remainingHealthbar"></div>
@@ -229,7 +197,7 @@
       </div>
 
       <!-- Result overlay -->
-      <div id="result" class="result">result</div>
+      <div id="result" class="result"></div>
 
       <!-- Menu overlay -->
       <div id="menu" class="menu">
@@ -251,8 +219,6 @@
     }
   </script>
 
-  <!-- IMPORTANT: no click handlers here. index.js controls the game flow. -->
   <script type="module" src="../js/index.js"></script>
 </body>
-
 </html>
