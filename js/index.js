@@ -99,14 +99,33 @@ function updateHealthBars() {
 
 function endGame(winnerText) {
   gameOver = true
+
+  // Freeze everything
   player.velocity.x = 0
   player.velocity.y = 0
   enemy.velocity.x = 0
   enemy.velocity.y = 0
 
-  
-
   document.getElementById('result').style.display = 'flex'
+
+  // ✅ WIN → auto redirect
+  if (winnerText.includes('Won')) {
+    document.getElementById('result').innerHTML = `
+      <div style="text-align:center">
+        <h1>${winnerText}</h1>
+        <p>Redirecting...</p>
+      </div>
+    `
+
+    // ⏳ wait 2 seconds, then go to question.html
+    setTimeout(() => {
+      window.location.href = './question.html'
+    }, 2000)
+
+    return
+  }
+
+  // ❌ LOSS → show retry
   document.getElementById('result').innerHTML = `
     <div style="text-align:center">
       <h1>${winnerText}</h1>
@@ -119,8 +138,8 @@ function endGame(winnerText) {
   document.getElementById('retryBtn').onclick = () => {
     location.reload()
   }
-  
 }
+
 
 function animate() {
   requestAnimationFrame(animate)
