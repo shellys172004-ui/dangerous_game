@@ -61,7 +61,11 @@ class Fighter extends Sprite {
         this.velocity.x = -this.moveFactor
         this.switchSprite('run')
         running = true
-      } else if (this.keys.right.pressed && this.lastKey === 'right' && this.position.x <= canvas.width - this.width) {
+      } else if (
+        this.keys.right.pressed &&
+        this.lastKey === 'right' &&
+        this.position.x <= canvas.width - this.width
+      ) {
         this.velocity.x = this.moveFactor
         this.switchSprite('run')
         running = true
@@ -88,7 +92,6 @@ class Fighter extends Sprite {
     this.isAttacking = true
     this.switchSprite('attack1')
 
-    // hit check immediately (simple)
     if (this.isHitting(enemyFighter)) {
       enemyFighter.health = Math.max(0, enemyFighter.health - 20)
       enemyFighter.isTakingHit = true
@@ -103,26 +106,20 @@ class Fighter extends Sprite {
   update() {
     super.update()
 
-    // Update attack box
     this.attackBox.position.x = this.position.x + this.attackBox.offSet.x
     this.attackBox.position.y = this.position.y
 
-    // Apply velocity
     this.position.x += this.velocity.x
     this.position.y += this.velocity.y
 
-    // Gravity / ground
     if (this.position.y + this.height >= canvas.height - 96) {
       this.velocity.y = 0
       this.inTheAir = false
     } else {
       this.velocity.y += gravity
       this.inTheAir = true
-      if (this.velocity.y > 0) this.switchSprite('fall')
-      else this.switchSprite('jump')
     }
 
-    // Idle fallback
     if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
       this.switchSprite('idle')
     }
@@ -131,14 +128,12 @@ class Fighter extends Sprite {
   switchSprite(sprite) {
     if (!this.sprites[sprite]) return
     if (this.image === this.sprites[sprite].image) return
-
     this.image = this.sprites[sprite].image
     this.maxFrames = this.sprites[sprite].maxFrames
     this.currentFrame = 0
   }
 }
 
-/* PLAYER */
 export const player = new Fighter({
   name: 'player',
   position: { x: 100, y: 0 },
@@ -157,14 +152,10 @@ export const player = new Fighter({
     takeHit: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Take hit White.png', maxFrames: 4 },
     death: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Death.png', maxFrames: 6 }
   },
-  keys: {
-    left: { pressed: false },
-    right: { pressed: false }
-  },
+  keys: { left: { pressed: false }, right: { pressed: false } },
   attackTime: 400
 })
 
-/* ENEMY */
 export const enemy = new Fighter({
   name: 'enemy',
   position: { x: 750, y: 0 },
@@ -183,10 +174,7 @@ export const enemy = new Fighter({
     takeHit: { imageSrc: '/dangerous_game/assets/img/kenji/Take hit white.png', maxFrames: 3 },
     death: { imageSrc: '/dangerous_game/assets/img/kenji/Death.png', maxFrames: 7 }
   },
-  keys: {
-    left: { pressed: false },
-    right: { pressed: false }
-  },
+  keys: { left: { pressed: false }, right: { pressed: false } },
   attackTime: 350
 })
 
