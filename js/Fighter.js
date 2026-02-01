@@ -17,7 +17,6 @@ class Fighter extends Sprite {
     holdFrames,
     offsetFrame = { x: 0, y: 0 },
     sprites,
-    keys,
     attackTime
   }) {
     super({ position, imageSrc, scale, maxFrames, holdFrames, offsetFrame })
@@ -29,7 +28,6 @@ class Fighter extends Sprite {
     this.height = 150
 
     this.moveFactor = 6
-    this.lastKey = null
 
     this.inTheAir = false
     this.isAttacking = false
@@ -50,30 +48,7 @@ class Fighter extends Sprite {
       this.sprites[s].image.src = this.sprites[s].imageSrc
     }
 
-    this.keys = keys
     this.attackTime = attackTime
-  }
-
-  movement() {
-    let running = false
-
-    if (this.health > 0) {
-      if (this.keys.left.pressed && this.lastKey === 'left' && this.position.x >= 0) {
-        this.velocity.x = -this.moveFactor
-        this.switchSprite('run')
-        running = true
-      } else if (
-        this.keys.right.pressed &&
-        this.lastKey === 'right' &&
-        this.position.x <= canvas.width - this.width
-      ) {
-        this.velocity.x = this.moveFactor
-        this.switchSprite('run')
-        running = true
-      }
-    }
-
-    return running
   }
 
   isHitting(enemyFighter) {
@@ -93,7 +68,7 @@ class Fighter extends Sprite {
     this.isAttacking = true
     this.switchSprite('attack1')
 
-    // hit check (simple)
+    // hit check
     if (this.isHitting(enemyFighter)) {
       enemyFighter.health = Math.max(0, enemyFighter.health - 20)
       enemyFighter.isTakingHit = true
@@ -108,11 +83,11 @@ class Fighter extends Sprite {
   update() {
     super.update()
 
-    // update attack box to follow fighter
+    // follow fighter
     this.attackBox.position.x = this.position.x + this.attackBox.offSet.x
     this.attackBox.position.y = this.position.y
 
-    // apply movement
+    // apply velocity
     this.position.x += this.velocity.x
     this.position.y += this.velocity.y
 
@@ -124,16 +99,16 @@ class Fighter extends Sprite {
       this.velocity.y += gravity
       this.inTheAir = true
 
-      // ✅ added: air animations
-      if (this.velocity.y < 0) this.switchSprite('jump')
-      else this.switchSprite('fall')
+      // ✅ air animations (fix glitch)
+      if (!this.isAttacking && !this.isTakingHit) {
+        if (this.velocity.y < 0) this.switchSprite('jump')
+        else this.switchSprite('fall')
+      }
     }
 
-    // keep inside canvas horizontally
+    // keep inside canvas
     if (this.position.x < 0) this.position.x = 0
     if (this.position.x > canvas.width - this.width) this.position.x = canvas.width - this.width
-
-    // idle fallback intentionally disabled (handled in index.js)
   }
 
   switchSprite(sprite) {
@@ -163,7 +138,6 @@ export const player = new Fighter({
     takeHit: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Take Hit White.png', maxFrames: 4 },
     death: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Death.png', maxFrames: 6 }
   },
-  keys: { left: { pressed: false }, right: { pressed: false } },
   attackTime: 400
 })
 
@@ -182,11 +156,10 @@ export const enemy = new Fighter({
     jump: { imageSrc: '/dangerous_game/assets/img/kenji/Jump.png', maxFrames: 2 },
     fall: { imageSrc: '/dangerous_game/assets/img/kenji/Fall.png', maxFrames: 2 },
     attack1: { imageSrc: '/dangerous_game/assets/img/kenji/Attack1.png', maxFrames: 4 },
-    // ✅ changed: match filename casing (adjust if your repo differs)
+    // ⚠️ Make sure this matches your actual file name EXACTLY
     takeHit: { imageSrc: '/dangerous_game/assets/img/kenji/Take hit white.png', maxFrames: 3 },
     death: { imageSrc: '/dangerous_game/assets/img/kenji/Death.png', maxFrames: 7 }
   },
-  keys: { left: { pressed: false }, right: { pressed: false } },
   attackTime: 350
 })
 
