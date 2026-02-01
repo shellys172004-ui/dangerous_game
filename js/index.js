@@ -63,6 +63,17 @@ function attachControls() {
   })
 }
 
+function inAttackRange(attacker, defender) {
+  const attackX = attacker.position.x + attacker.attackBox.offSet.x
+  return (
+    attackX + attacker.attackBox.width >= defender.position.x &&
+    attackX <= defender.position.x + defender.width &&
+    attacker.position.y + attacker.attackBox.height >= defender.position.y &&
+    attacker.position.y <= defender.position.y + defender.height
+  )
+}
+
+
 // ✅ Simple AI: approach + attack when close
 function enemyAI() {
   if (enemy.health <= 0) {
@@ -80,8 +91,8 @@ function enemyAI() {
     enemy.velocity.x = 0
     if (
   enemy.attackCooldown &&
-  enemy.isHitting(player) &&
-  Math.random() < 0.35   // 🔽 35% chance to attack
+  enemy.inAttackRange(enemy, player)) &&
+  Math.random() < 0.7   // 🔽 35% chance to attack
 ) {
   enemy.attack(player)
 }
