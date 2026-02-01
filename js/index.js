@@ -1,6 +1,23 @@
 import { player, enemy } from './Fighter.js'
 import { background, shop } from './Sprite.js'
 
+const bgMusic = document.getElementById('bgMusic')
+
+function unlockAudio() {
+  // try to play
+  bgMusic.volume = 0.6
+  const p = bgMusic.play()
+  if (p) p.catch(() => {}) // ignore if blocked
+  // remove listeners
+  window.removeEventListener('pointerdown', unlockAudio)
+  window.removeEventListener('keydown', unlockAudio)
+}
+
+// one gesture unlocks everything
+window.addEventListener('pointerdown', unlockAudio, { once: true })
+window.addEventListener('keydown', unlockAudio, { once: true })
+
+
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
