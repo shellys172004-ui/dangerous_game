@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -7,10 +8,10 @@
 
   <title>The Dangerous game</title>
 
-  <!-- Keep existing game CSS (DO NOT TOUCH game rectangle styles) -->
+  <!-- KEEP existing game CSS (DO NOT TOUCH game rectangle styles) -->
   <link rel="stylesheet" href="../css/styles.css" />
 
-  <!-- Orbitron font -->
+  <!-- Match question.html vibe -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
 
   <style>
@@ -34,21 +35,13 @@
       animation: grid 12s linear infinite;
       z-index: 0;
     }
-    @keyframes grid {
-      to { background-position: 0 36px, 36px 0; }
-    }
+    @keyframes grid { to { background-position: 0 36px, 36px 0; } }
 
     /* SPRINKLES */
-    .sprinkles {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1;
-    }
+    .sprinkles { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
     .sprinkle {
       position: absolute;
-      width: 4px;
-      height: 4px;
+      width: 4px; height: 4px;
       background: #00fff0;
       box-shadow: 0 0 12px #00fff0, 0 0 30px #00fff0;
       animation: float 6s linear infinite;
@@ -58,69 +51,52 @@
       to   { transform: translateY(-10vh); opacity: 1; }
     }
 
-    /* Container above background */
-    .container {
-      position: relative;
-      z-index: 2;
-    }
-
-    /* Hide unused UI */
+    /* Don't show the old keymapping area */
     .information { display: none !important; }
-    #hud { display: none; }
-    #result { display: none; }
 
-    /* 🔥 IMPORTANT: Anchor menu to game rectangle */
-    .game {
-      position: relative; /* so menu can absolute-center INSIDE this box */
-      z-index: 2;
-    }
+    /* ---- MENU: centered INSIDE the game rectangle, not the whole page ---- */
+    .game { position: relative; } /* anchor for menu */
 
-    /* Menu sits ON TOP of the game rectangle and is centered in it */
     #menu.menu {
       position: absolute;
-      inset: 0;
-      z-index: 50;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
 
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 26px;
+      gap: 22px;
 
-      background: transparent;
-      pointer-events: auto; /* clickable */
       text-align: center;
+      padding: 0;
+      background: transparent;
     }
 
-    /* TITLE */
     .menuTitle {
       font-size: 3.8rem;
       font-weight: 700;
       letter-spacing: 3px;
       color: #00fff0;
-
       text-shadow:
         0 0 12px rgba(0,255,240,1),
         0 0 36px rgba(0,255,240,.9),
         0 0 90px rgba(0,255,240,.7);
-
       animation: floatQ 3s ease-in-out infinite;
       pointer-events: none;
     }
-    @keyframes floatQ {
-      50% { transform: translateY(-12px); }
-    }
+    @keyframes floatQ { 50% { transform: translateY(-12px); } }
 
-    /* START GAME BUTTON
-       Normal: black bg + neon text
-       Hover: neon bg + black text */
+    /* Start button: BLACK bg + neon text, hover neon bg + black text */
     #1player.menuOption {
       display: inline-flex;
       align-items: center;
       justify-content: center;
 
-      padding: 18px 60px;
-      min-width: 240px;
+      min-width: 260px;
+      padding: 18px 58px;
 
       font-size: 1.25rem;
       font-weight: 700;
@@ -130,18 +106,14 @@
       border: 2px solid #00fff0;
       cursor: pointer;
 
-      background: rgba(0,0,0,0.85);
+      background: rgba(0,0,0,0.88);
       color: #00fff0;
 
       box-shadow:
         0 0 18px rgba(0,255,240,.9),
         0 0 55px rgba(0,255,240,.35);
 
-      transition:
-        transform .15s ease,
-        background .15s ease,
-        color .15s ease,
-        box-shadow .15s ease;
+      transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
       user-select: none;
     }
 
@@ -149,26 +121,31 @@
       background: linear-gradient(135deg, #00fff0, #00b3ff);
       color: #000;
       transform: translateY(-2px) scale(1.05);
-
       box-shadow:
         0 0 30px rgba(0,255,240,1),
         0 0 95px rgba(0,255,240,.85);
     }
 
-    #1player.menuOption:active {
-      transform: scale(0.98);
-    }
+    #1player.menuOption:active { transform: scale(0.98); }
+
+    /* Hide 2-player option if it exists in older HTML/CSS */
+    #2players { display: none !important; }
   </style>
 </head>
 
 <body>
-
   <div class="background"></div>
   <div class="sprinkles" id="sprinkles"></div>
 
   <div class="container">
 
-    <!-- HUD -->
+    <!-- MENU: only title + one button -->
+    <div id="menu" class="menu">
+      <div class="menuTitle">The Dangerous game</div>
+      <div id="1player" class="menuOption">Start Game</div>
+    </div>
+
+    <!-- HUD stays as your game expects (DON'T FORCE HIDE/SHOW HERE) -->
     <div id="hud" class="hud">
       <div class="healthLayout">
         <div class="remainingHealthbar"></div>
@@ -185,17 +162,10 @@
 
     <div id="result" class="result">result</div>
 
-    <!-- GAME RECTANGLE (UNTOUCHED) -->
+    <!-- GAME RECTANGLE: untouched -->
     <div class="game">
       <canvas id="gameWindow"></canvas>
-
-      <!-- ✅ MENU moved INSIDE .game so it centers properly -->
-      <div id="menu" class="menu">
-        <div class="menuTitle">The Dangerous game</div>
-        <div id="1player" class="menuOption">Start Game</div>
-      </div>
     </div>
-
   </div>
 
   <script>
@@ -208,19 +178,11 @@
       s.style.animationDelay = Math.random() * 6 + 's';
       sprinkles.appendChild(s);
     }
-
-    // While menu is visible, let clicks go to the menu (not the canvas)
-    const canvas = document.getElementById('gameWindow');
-    const menu = document.getElementById('menu');
-    canvas.style.pointerEvents = 'none';
-
-    // After clicking Start Game, hide menu and enable canvas
-    document.getElementById('1player').addEventListener('click', () => {
-      menu.style.display = 'none';
-      canvas.style.pointerEvents = 'auto';
-    });
   </script>
 
+  <!-- IMPORTANT: do NOT add any click handler here.
+       index.js already does start/hud/result/win/lose/retry. -->
   <script type="module" src="../js/index.js"></script>
 </body>
+
 </html>
