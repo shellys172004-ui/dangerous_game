@@ -4,17 +4,17 @@ import { background, shop } from './Sprite.js'
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
-let gameStarted = false
+let started = false
 
 document.getElementById('1player').addEventListener('click', start)
-document.getElementById('2players').addEventListener('click', start) // for now same
+document.getElementById('2players').addEventListener('click', start)
 
 function start() {
   document.getElementById('menu').style.display = 'none'
   document.getElementById('hud').style.display = 'flex'
 
-  if (!gameStarted) {
-    gameStarted = true
+  if (!started) {
+    started = true
     controls()
     animate()
   }
@@ -36,15 +36,12 @@ function controls() {
 
 function enemyAI() {
   if (enemy.health <= 0) return
-
   const dist = player.position.x - enemy.position.x
   const abs = Math.abs(dist)
   const speed = 2.5
 
-  if (abs > 140) {
-    enemy.velocity.x = dist > 0 ? speed : -speed
-    enemy.switchSprite('run')
-  } else {
+  if (abs > 140) enemy.velocity.x = dist > 0 ? speed : -speed
+  else {
     enemy.velocity.x = 0
     if (enemy.attackCooldown && enemy.isHitting(player)) enemy.attack(player)
   }
@@ -52,13 +49,11 @@ function enemyAI() {
 
 function animate() {
   requestAnimationFrame(animate)
-
   c.clearRect(0, 0, canvas.width, canvas.height)
 
   background.update()
   shop.update()
 
-  // Reset x then apply movement/AI
   player.velocity.x = 0
   enemy.velocity.x = 0
 
