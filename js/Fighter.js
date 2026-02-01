@@ -130,8 +130,8 @@ class Fighter extends Sprite {
     if (this.position.x > canvas.width - this.width) this.position.x = canvas.width - this.width
 
     // idle fallback
-    if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
-      this.switchSprite('idle')
+    //if (!this.inTheAir && !this.isAttacking && !this.isTakingHit) {
+      //this.switchSprite('idle')
     }
   }
 
