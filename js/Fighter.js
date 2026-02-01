@@ -159,7 +159,7 @@ export const player = new Fighter({
     jump: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Jump.png', maxFrames: 2 },
     fall: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Fall.png', maxFrames: 2 },
     attack1: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Attack1.png', maxFrames: 6 },
-    takeHit: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Take hit White.png', maxFrames: 4 },
+    takeHit: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Take Hit White.png', maxFrames: 4 },
     death: { imageSrc: '/dangerous_game/assets/img/samuraiMack/Death.png', maxFrames: 6 }
   },
   keys: { left: { pressed: false }, right: { pressed: false } },
