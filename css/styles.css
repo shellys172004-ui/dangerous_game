@@ -125,7 +125,7 @@ body {
     border-width: 3px 3px 3px 3px;
     font-size: 60px;
     padding: 10px 5px 10px 5px;
-    margin-top: 10px;
+    margin-top: 15px;
     margin-bottom: 10px;
     cursor: pointer;
     transition: color .3s ease-in-out, box-shadow .3s ease-in-out;
