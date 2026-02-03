@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Make Your Choice</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;overflow-x:hidden}
+body{
+  min-height:100svh; /* phone-safe viewport */
+  overflow:hidden;
+  font-family:'Orbitron',sans-serif;
+  background:radial-gradient(circle at top,#0e1a2f,#05070c);
+  color:#00fff0;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* BACKGROUND GRID */
+.background{
+  position:fixed;inset:0;
+  background:
+    repeating-linear-gradient(0deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px),
+    repeating-linear-gradient(90deg,rgba(0,255,255,.06) 0 1px,transparent 1px 36px);
+  animation:grid 12s linear infinite;
+  z-index:0;
+}
+@keyframes grid{to{background-position:0 36px,36px 0}}
+
+/* SPRINKLES */
+.sprinkles{position:fixed;inset:0;pointer-events:none;z-index:1}
+.sprinkle{
+  position:absolute;
+  width:4px;height:4px;
+  background:#00fff0;
+  box-shadow:0 0 12px #00fff0,0 0 30px #00fff0;
+  animation:float 6s linear infinite;
+}
+@keyframes float{
+  from{transform:translateY(100vh);opacity:0}
+  to{transform:translateY(-10vh);opacity:1}
+}
+
+/* UI */
+.ui{
+  position:relative;
+  z-index:3;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+.ui.hidden{display:none}
+
+h2{
+  font-size:2.3rem;
+  text-shadow:0 0 25px #00fff0;
+  margin-bottom:20px;
+  animation:floatQ 3s ease-in-out infinite;
+  text-align:center;
+  padding:0 10px;
+}
+@keyframes floatQ{50%{transform:translateY(-10px)}}
+
+button{
+  padding:14px 40px;
+  margin:12px;
+  font-family:'Orbitron';
+  font-size:1rem;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  position:relative; /* needed for radiators */
+  touch-action:manipulation;
+}
+
+/* YES */
+#yes{
+  background:linear-gradient(135deg,#00fff0,#00b3ff);
+  color:#000;
+  box-shadow:0 0 40px #00fff0;
+}
+
+/* NO */
+#no{
+  position:absolute;
+  background:#ff004c;
+  color:#fff;
+  box-shadow:0 0 35px #ff004c;
+}
+
+/* YES TRANSITION SCREEN (RESTORED) */
+.transition{
+  position:fixed;inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  pointer-events:none;
+  z-index:6;
+  transition:opacity .6s ease;
+  padding:16px;
+}
+.transition.active{opacity:1;pointer-events:auto}
+
+.transition h1{
+  font-size:2.2rem;
+  text-shadow:0 0 30px #00fff0;
+  animation:glitch .25s infinite;
+  text-align:center;
+}
+@keyframes glitch{
+  25%{transform:translate(-2px,2px)}
+  50%{transform:translate(2px,-2px)}
+}
+
+.transition p{margin-top:12px;opacity:.85;text-align:center}
+
+/* GO BACK BUTTON */
+.transition button{
+  margin-top:30px;
+  background:transparent;
+  color:#00fff0;
+  border:1px solid #00fff0;
+  box-shadow:0 0 25px #00fff0;
+}
+.transition button:hover{
+  background:#00fff0;
+  color:#000;
+}
+
+/* CRT */
+body.crt::before{
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,.25) 0,
+    rgba(0,0,0,.25) 1px,
+    transparent 2px
+  );
+  pointer-events:none;
+  z-index:20;
+}
+body.crt{animation:jitter .15s infinite}
+@keyframes jitter{50%{transform:translate(1px,-1px)}}
+
+/* GLASS */
+#glass{position:fixed;inset:0;pointer-events:none;z-index:4}
+
+/* NO MODAL */
+.noModal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.85);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  pointer-events:none;
+  z-index:7;
+  padding:16px;
+}
+.noModal.active{opacity:1;pointer-events:auto}
+
+.noModal button{
+  background:transparent;
+  color:#00fff0;
+  border:1px solid #00fff0;
+  box-shadow:0 0 30px #00fff0;
+}
+
+/* SHARDS */
+.shard{
+  position:fixed;
+  width:30px;height:30px;
+  background:#00fff0;
+  clip-path:polygon(50% 0%,100% 30%,80% 100%,20% 100%,0% 30%);
+  box-shadow:0 0 20px #00fff0,0 0 40px rgba(0,255,240,.9);
+  pointer-events:none;
+  z-index:8;
+}
+
+/* BLUR */
+body.blur{
+  filter:blur(6px) brightness(.85);
+  transition:filter .6s ease;
+}
+
+.tapOverlay{
+  position:fixed;
+  inset:0;
+  z-index:999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  cursor:pointer;
+  padding:16px;
+}
+.tapOverlay.hidden{display:none}
+.tapOverlay span{
+  padding:14px 18px;
+  border:1px solid #00fff0;
+  box-shadow:0 0 30px #00fff0;
+  border-radius:10px;
+  text-shadow:0 0 18px #00fff0;
+  color:#00fff0;
+  position:relative; /* for overlay radiators */
+  max-width:min(92vw,560px);
+  text-align:center;
+  touch-action:manipulation;
+}
+
+/* --- 3-step overlay scaling --- */
+.tapOverlay.step1 span{ font-size:1.05rem; transform:scale(1); }
+.tapOverlay.step2 span{ font-size:1.35rem; transform:scale(1.15); }
+.tapOverlay.step3 span{ font-size:1.8rem;  transform:scale(1.35); }
+
+/* =================== DENSE RADIATING SPECTRUM (CYAN) =================== */
+.radiators{
+  position:absolute;
+  inset:-32px;                 /* outward aura distance */
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .12s linear;
+}
+.radiators.on{ opacity:1; }
+
+.rside{
+  position:absolute;
+  display:flex;
+  gap:2px;                     /* tighter like your reference */
+  opacity:.95;
+}
+
+/* TOP + BOTTOM: thin vertical bars */
+.rside.top{
+  left:18px; right:18px; top:0;
+  height:28px;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.rside.bottom{
+  left:18px; right:18px; bottom:0;
+  height:28px;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.rbarV{
+  width:1px;                   /* finer */
+  height:2px;
+  background:#00fff0;
+  box-shadow:0 0 8px rgba(0,255,240,.85);
+  transform-origin:bottom;
+  transform:scaleY(.08);
+}
+.rbarV.down{ transform-origin:top; }
+
+/* LEFT + RIGHT: thin horizontal bars */
+.rside.left{
+  top:18px; bottom:18px; left:0;
+  width:28px;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.rside.right{
+  top:18px; bottom:18px; right:0;
+  width:28px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:space-between;
+}
+.rbarH{
+  height:1px;                  /* finer */
+  width:2px;
+  background:#00fff0;
+  box-shadow:0 0 8px rgba(0,255,240,.85);
+  transform-origin:right;
+  transform:scaleX(.08);
+}
+.rbarH.right{ transform-origin:left; }
+/* ====================================================================== */
+
+/* ===================== AUDIO RADIATOR CANVAS (BARS) ===================== */
+#vizCanvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1001; /* above overlay (999) */
+}
+/* ======================================================================= */
+
+/* ================= MOBILE FRIENDLY ================= */
+@media (max-width: 600px){
+  .ui{ padding:16px; }
+  h2{
+    font-size:clamp(1.4rem,6vw,1.9rem);
+    margin-bottom:18px;
+  }
+  button{
+    width:min(88vw, 320px);
+    padding:14px 0;
+    font-size:1rem;
+  }
+  #no{ position:relative; } /* stop absolute chaos on phones */
+  .transition h1{ font-size:clamp(1.6rem,7vw,2.2rem); }
+  .noModal h2{ font-size:clamp(1.4rem,6vw,1.8rem); text-align:center; padding:0 12px; }
+  .tapOverlay span{ font-size:clamp(1rem,4.5vw,1.4rem); }
+}
+/* ================================================ */
+
+</style>
+</head>
+
+<body>
+
+<div class="background"></div>
+<div class="sprinkles" id="sprinkles"></div>
+<svg id="glass"></svg>
+
+<div class="ui" id="mainUI">
+  <h2 id="question">Will you be my valentine?</h2>
+  <button id="yes">YES</button>
+  <button id="no">NO</button>
+</div>
+
+<div class="transition" id="transition">
+  <h1>"yAyAyAyAyAY" 🎮🔥</h1>
+  <p>You made the wise choice 😌💙</p>
+  <button id="back">GO BACK</button>
+</div>
+
+<div class="noModal" id="noModal">
+  <h2>I know that wasn’t intentional.</h2>
+  <button id="apology">Sorry, I meant YES!!!!</button>
+</div>
+
+<div class="tapOverlay step1" id="tapOverlay">
+  <span id="tapOverlayText">Click if you really want to enter.</span>
+</div>
+
+<audio id="heartbeat" src="heartbeat.mp3" loop></audio>
+<audio id="glassSound" src="glass.mp3"></audio>
+<audio id="happySound" src="happy_happy_happy_cat.mp3"></audio>
+<audio id="questionSound" src="question.mp3" loop></audio>
+
+<script>
+/* SPRINKLES */
+const sprinkles=document.getElementById('sprinkles');
+for(let i=0;i<50;i++){
+  const s=document.createElement('div');
+  s.className='sprinkle';
+  s.style.left=Math.random()*100+'%';
+  s.style.animationDelay=Math.random()*6+'s';
+  sprinkles.appendChild(s);
+}
+
+/* ELEMENTS */
+const yes=document.getElementById('yes');
+const no=document.getElementById('no');
+const mainUI=document.getElementById('mainUI');
+const transition=document.getElementById('transition');
+const back=document.getElementById('back');
+const noModal=document.getElementById('noModal');
+const apology=document.getElementById('apology');
+const glass=document.getElementById('glass');
+const heartbeat=document.getElementById('heartbeat');
+const glassSound=document.getElementById('glassSound');
+const happySound=document.getElementById('happySound');
+const questionSound=document.getElementById('questionSound');
+const questionEl=document.getElementById('question');
+const tapOverlay=document.getElementById('tapOverlay');
+const tapOverlayText=document.getElementById('tapOverlayText');
+
+questionSound.volume = 0.6;
+
+let logoutTimer;
+
+/* ===================== AUDIO ANALYSER ===================== */
+let audioCtx = null;
+let analyser = null;
+let dataArr = null;
+let sources = new Map();
+let currentAudioEl = null;
+
+function ensureAudioVisuals(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 4096;
+  dataArr = new Uint8Array(analyser.frequencyBinCount);
+  analyser.connect(audioCtx.destination);
+}
+
+function getSourceFor(el){
+  if(sources.has(el)) return sources.get(el);
+  const src = audioCtx.createMediaElementSource(el);
+  sources.set(el, src);
+  return src;
+}
+
+function setActiveAudio(el){
+  if(!audioCtx || !analyser) return;
+  if(currentAudioEl === el) return;
+
+  if(currentAudioEl && sources.has(currentAudioEl)){
+    try{ sources.get(currentAudioEl).disconnect(); }catch(e){}
+  }
+  currentAudioEl = el;
+
+  try{
+    const src = getSourceFor(el);
+    src.connect(analyser);
+  }catch(e){}
+}
+/* ========================================================== */
+
+/* ===================== RADIATORS BUILD ===================== */
+function makeBars(n, cls){
+  const frag=document.createDocumentFragment();
+  for(let i=0;i<n;i++){
+    const b=document.createElement('span');
+    b.className = cls;
+    frag.appendChild(b);
+  }
+  return frag;
+}
+
+function attachRadiators(target, topCount=96, sideCount=34){
+  const r=document.createElement('div');
+  r.className='radiators';
+
+  const top=document.createElement('div');
+  top.className='rside top';
+  top.appendChild(makeBars(topCount,'rbarV'));
+
+  const bottom=document.createElement('div');
+  bottom.className='rside bottom';
+  bottom.appendChild(makeBars(topCount,'rbarV down'));
+
+  const left=document.createElement('div');
+  left.className='rside left';
+  left.appendChild(makeBars(sideCount,'rbarH'));
+
+  const right=document.createElement('div');
+  right.className='rside right';
+  right.appendChild(makeBars(sideCount,'rbarH right'));
+
+  r.appendChild(top);
+  r.appendChild(bottom);
+  r.appendChild(left);
+  r.appendChild(right);
+
+  target.appendChild(r);
+
+  return {
+    root:r,
+    topBars:[...top.children],
+    bottomBars:[...bottom.children],
+    leftBars:[...left.children],
+    rightBars:[...right.children],
+    topVal:new Float32Array(topCount),
+    botVal:new Float32Array(topCount),
+    leftVal:new Float32Array(sideCount),
+    rightVal:new Float32Array(sideCount),
+    topPeak:new Float32Array(topCount),
+    botPeak:new Float32Array(topCount),
+    leftPeak:new Float32Array(sideCount),
+    rightPeak:new Float32Array(sideCount)
+  };
+}
+
+const yesRad = attachRadiators(yes, 96, 34);
+const noRad  = attachRadiators(no,  96, 34);
+const overlayRad = attachRadiators(tapOverlayText, 96, 34);
+/* ========================================================== */
+
+/* ===================== DENSE SPECTRUM + PEAK HOLD ===================== */
+let visRAF = null;
+
+function setRadiatorsOn(rad, on){
+  if(on) rad.root.classList.add('on');
+  else rad.root.classList.remove('on');
+}
+
+function resetRadiators(rad){
+  setRadiatorsOn(rad,false);
+  for(const b of rad.topBars){ b.style.height='2px'; }
+  for(const b of rad.bottomBars){ b.style.height='2px'; }
+  for(const b of rad.leftBars){ b.style.width='2px'; }
+  for(const b of rad.rightBars){ b.style.width='2px'; }
+
+  rad.topVal.fill(0); rad.botVal.fill(0); rad.leftVal.fill(0); rad.rightVal.fill(0);
+  rad.topPeak.fill(0); rad.botPeak.fill(0); rad.leftPeak.fill(0); rad.rightPeak.fill(0);
+}
+
+function applySideBarsV(bars, peakArr, scalePx){
+  for(let i=0;i<bars.length;i++){
+    const h = Math.max(2, 2 + peakArr[i]*scalePx);
+    bars[i].style.height = h + 'px';
+  }
+}
+function applySideBarsH(bars, peakArr, scalePx){
+  for(let i=0;i<bars.length;i++){
+    const w = Math.max(2, 2 + peakArr[i]*scalePx);
+    bars[i].style.width = w + 'px';
+  }
+}
+
+function applySpectrum(rad, freq, gain=1){
+  const fall = 0.78;
+  const peakFall = 0.92;
+
+  const topN = rad.topBars.length;
+  const sideN = rad.leftBars.length;
+  const total = topN + sideN + topN + sideN;
+
+  const startBin = 10;
+  const endBin = Math.min(freq.length-1, 640);
+  const band = Math.max(1, endBin - startBin);
+
+  function binFor(pos){
+    return startBin + Math.floor((pos / total) * band);
+  }
+
+  for(let i=0;i<topN;i++){
+    const v = freq[binFor(i)] / 255;
+    const s = (v*v) * gain;
+    rad.topVal[i] = Math.max(s, rad.topVal[i]*fall);
+    rad.topPeak[i] = Math.max(rad.topVal[i], rad.topPeak[i]*peakFall);
+  }
+  for(let i=0;i<sideN;i++){
+    const v = freq[binFor(topN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.rightVal[i] = Math.max(s, rad.rightVal[i]*fall);
+    rad.rightPeak[i] = Math.max(rad.rightVal[i], rad.rightPeak[i]*peakFall);
+  }
+  for(let i=0;i<topN;i++){
+    const v = freq[binFor(topN + sideN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.botVal[i] = Math.max(s, rad.botVal[i]*fall);
+    rad.botPeak[i] = Math.max(rad.botVal[i], rad.botPeak[i]*peakFall);
+  }
+  for(let i=0;i<sideN;i++){
+    const v = freq[binFor(topN + sideN + topN + i)] / 255;
+    const s = (v*v) * gain;
+    rad.leftVal[i] = Math.max(s, rad.leftVal[i]*fall);
+    rad.leftPeak[i] = Math.max(rad.leftVal[i], rad.leftPeak[i]*peakFall);
+  }
+
+  const vScale = 54;
+  const hScale = 54;
+
+  applySideBarsV(rad.topBars, rad.topPeak, vScale);
+  applySideBarsV(rad.bottomBars, rad.botPeak, vScale);
+  applySideBarsH(rad.leftBars, rad.leftPeak, hScale);
+  applySideBarsH(rad.rightBars, rad.rightPeak, hScale);
+}
+
+function visualLoop(){
+  const playing = analyser && currentAudioEl && !currentAudioEl.paused;
+
+  const overlayActive = !tapOverlay.classList.contains('hidden');
+  const questionActive = !mainUI.classList.contains('hidden');
+  const noModalActive = noModal.classList.contains('active');
+  const transitionActive = transition.classList.contains('active');
+
+  const showYesNo = playing && questionActive && !overlayActive && !noModalActive && !transitionActive;
+  const showOverlay = playing && overlayActive;
+
+  if(!playing){
+    resetRadiators(yesRad);
+    resetRadiators(noRad);
+    resetRadiators(overlayRad);
+    visRAF = requestAnimationFrame(visualLoop);
+    return;
+  }
+
+  analyser.getByteFrequencyData(dataArr);
+
+  const yesGain = (currentAudioEl === happySound) ? 1.25 : 1.0;
+  const noGain  = (currentAudioEl === heartbeat) ? 1.35 : 0.95;
+  const ovGain  = 1.0;
+
+  if(showYesNo){
+    setRadiatorsOn(yesRad, true);
+    setRadiatorsOn(noRad, true);
+    applySpectrum(yesRad, dataArr, yesGain);
+    applySpectrum(noRad, dataArr, noGain);
+  }else{
+    setRadiatorsOn(yesRad, false);
+    setRadiatorsOn(noRad, false);
+    resetRadiators(yesRad);
+    resetRadiators(noRad);
+  }
+
+  if(showOverlay){
+    setRadiatorsOn(overlayRad, true);
+    applySpectrum(overlayRad, dataArr, ovGain);
+  }else{
+    setRadiatorsOn(overlayRad, false);
+    resetRadiators(overlayRad);
+  }
+
+  const midBin = Math.min(110, dataArr.length-1);
+  const v = dataArr[midBin]/255;
+  const qGlow = Math.round(25 + (v*v)*85);
+  questionEl.style.textShadow = `0 0 ${qGlow}px #00fff0`;
+
+  visRAF = requestAnimationFrame(visualLoop);
+}
+/* ========================================================== */
+
+/* YES FLOW */
+function showYes(){
+  clearTimeout(logoutTimer);
+  mainUI.classList.add('hidden');
+  noModal.classList.remove('active');
+  document.body.classList.remove('crt','blur');
+  glass.innerHTML='';
+  heartbeat.pause();
+  questionSound.pause();
+  happySound.currentTime = 0;
+  setActiveAudio(happySound);
+  happySound.play();
+  transition.classList.add('active');
+}
+yes.onclick=showYes;
+apology.onclick=showYes;
+
+/* GO BACK */
+back.onclick=()=>{
+  transition.classList.remove('active');
+  mainUI.classList.remove('hidden');
+  happySound.pause();
+  happySound.currentTime = 0;
+
+  setActiveAudio(questionSound);
+  questionSound.play().catch(()=>{});
+};
+
+/* NO DODGE (Desktop + Mobile) */
+function dodgeNo(x, y){
+  const r = no.getBoundingClientRect();
+  if(Math.hypot(x - r.left, y - r.top) < 120){
+    const maxX = innerWidth - r.width - 20;
+    const maxY = innerHeight - r.height - 20;
+    no.style.left = Math.random() * maxX + 'px';
+    no.style.top  = Math.random() * maxY + 'px';
+  }
+}
+document.addEventListener('mousemove', e=>dodgeNo(e.clientX, e.clientY));
+document.addEventListener('touchmove', e=>{
+  const t = e.touches[0];
+  dodgeNo(t.clientX, t.clientY);
+},{passive:true});
+
+/* NO CLICK */
+no.onclick=e=>{
+  document.body.classList.add('crt');
+  noModal.classList.add('active');
+  heartbeat.currentTime = 0;
+  questionSound.pause();
+  setActiveAudio(heartbeat);
+  heartbeat.play();
+  crackFromCenter(e.clientX,e.clientY);
+
+  logoutTimer=setTimeout(()=>{
+    fullShatter();
+    setActiveAudio(glassSound);
+    glassSound.play();
+    polygonShardFall(innerWidth/2,innerHeight/2);
+    setTimeout(()=>{
+      document.body.classList.add('blur');
+      location.href='/private-site/';
+    },1600);
+  },10000);
+};
+
+// === CRACKS ===
+function crackSeed(x, y) {
+  for (let i = 0; i < 6; i++) {
+    let path = `M ${x} ${y}`;
+    let angle = Math.random() * Math.PI * 2;
+    let cx = x, cy = y;
+    for (let j = 0; j < 8; j++) {
+      angle += (Math.random() - 0.5) * 1;
+      const len = 50 + Math.random() * 50;
+      cx += Math.cos(angle) * len;
+      cy += Math.sin(angle) * len;
+      path += ` L ${cx} ${cy}`;
+    }
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', path);
+    p.setAttribute('stroke', '#00fff0');
+    p.setAttribute('stroke-width', '5');
+    p.setAttribute('fill', 'none');
+    p.style.filter = 'drop-shadow(0 0 25px #00fff0) drop-shadow(0 0 15px #00fff0)';
+    glass.appendChild(p);
+  }
+}
+
+function crackGrowth() {
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
+  crackSeed(centerX, centerY);
+}
+
+growthInterval = setInterval(crackGrowth, 1000);
+
+/* SHARDS */
+function polygonShardFall(centerX, centerY){
+  const shardCount = 90;
+  for(let i=0;i<shardCount;i++){
+    const f = document.createElement('div');
+    f.classList.add('fragment');
+
+    const shapes = [
+      'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+      'polygon(0 0, 100% 10%, 90% 100%, 10% 90%)',
+      'polygon(0 10%, 100% 0, 90% 100%, 0 90%)',
+      'polygon(10% 0, 100% 0, 90% 100%, 0 90%)'
+    ];
+    f.style.clipPath = shapes[Math.floor(Math.random()*shapes.length)];
+
+    const size = 15 + Math.random()*25;
+    f.style.width = size + 'px';
+    f.style.height = size + 'px';
+
+    f.style.background = '#00fff0';
+    f.style.boxShadow = '0 0 20px #00fff0, 0 0 40px #00fff0';
+
+    f.style.left = centerX + 'px';
+    f.style.top = centerY + 'px';
+
+    const dx = (Math.random() - 0.5) * window.innerWidth * (0.8 + Math.random()*0.5);
+    const dy = (Math.random() - 0.5) * window.innerHeight * (0.8 + Math.random()*0.5);
+    const rot = Math.random()*720-360;
+
+    f.animate(
+      [
+        {transform: 'translate(0,0) rotate(0deg)', opacity:1},
+        {transform: `translate(${dx}px,${dy}px) rotate(${rot}deg)`, opacity:0}
+      ],
+      {duration:1400 + Math.random()*400, easing:'cubic-bezier(.22,.61,.36,1)', fill:'forwards'}
+    );
+
+    document.body.appendChild(f);
+    setTimeout(()=>f.remove(),2000);
+  }
+}
+
+/* SVG ANIM */
+const style=document.createElement('style');
+style.innerHTML='@keyframes draw{to{stroke-dashoffset:0}}';
+document.head.appendChild(style);
+
+/* ---------- TAP TO START AUDIO (REQUIRED BY BROWSER) ---------- */
+
+// Block YES/NO until audio is unlocked
+yes.style.pointerEvents = 'none';
+no.style.pointerEvents = 'none';
+
+let overlayStep = 1;
+let audioPrimed = false;
+
+function setOverlayStep(step){
+  overlayStep = step;
+  tapOverlay.classList.remove('step1','step2','step3');
+  tapOverlay.classList.add('step'+step);
+
+  if(step===1) tapOverlayText.textContent = "Click if you really want to enter.";
+  if(step===2) tapOverlayText.textContent = "You can still turn back.";
+  if(step===3) tapOverlayText.textContent = "Enter at your own risk.";
+}
+
+setOverlayStep(1);
+
+function primeAudio(a){
+  const prevMuted = a.muted;
+  a.muted = true;
+  const p = a.play();
+  if(p && typeof p.then === 'function'){
+    p.then(()=>{
+      a.pause();
+      try{ a.currentTime = 0; }catch(e){}
+      a.muted = prevMuted;
+    }).catch(()=>{
+      a.muted = prevMuted;
+    });
+  }else{
+    a.pause();
+    try{ a.currentTime = 0; }catch(e){}
+    a.muted = prevMuted;
+  }
+}
+
+async function unlockAndStartQuestion(){
+  ensureAudioVisuals();
+  try{ await audioCtx.resume(); }catch(e){}
+
+  if(!visRAF) visualLoop();
+
+  try{
+    setActiveAudio(questionSound);
+    await questionSound.play();
+  }catch(e){
+    return;
+  }
+
+  if(!audioPrimed){
+    audioPrimed = true;
+    primeAudio(happySound);
+    primeAudio(heartbeat);
+    primeAudio(glassSound);
+  }
+
+  if(overlayStep < 3){
+    setOverlayStep(overlayStep + 1);
+    return;
+  }
+
+  tapOverlay.classList.add('hidden');
+  yes.style.pointerEvents = '';
+  no.style.pointerEvents = '';
+}
+
+tapOverlay.addEventListener('pointerdown', unlockAndStartQuestion, { passive:true });
+
+/* ===================== APPROVED BAR LOGIC (CANVAS, SEAMLESS CORNERS) ===================== */
+(() => {
+  let canvas = document.getElementById('vizCanvas');
+  if(!canvas){
+    canvas = document.createElement('canvas');
+    canvas.id = 'vizCanvas';
+    document.body.appendChild(canvas);
+  }
+  const ctx = canvas.getContext('2d');
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  function resize(){
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  const yesEl = document.getElementById('yes');
+  const noEl  = document.getElementById('no');
+  const ovEl  = document.getElementById('tapOverlayText');
+
+  const edgeWeight = (t)=>0.25 + 0.75*Math.sin(Math.PI*t);
+
+  class Radiator {
+    constructor(getRect, getRadius, color){
+      this.getRect = getRect;
+      this.getRadius = getRadius;
+      this.color = color;
+      this.cacheKey = '';
+      this.points = [];
+      this.regionIdx = { top:[], right:[], bottom:[], left:[] };
+      this.level = [];
+      this.peak = [];
+      this.val  = [];
+    }
+
+    build(){
+      const rect = this.getRect();
+      if(!rect) return;
+
+      const r = this.getRadius(rect);
+      const key = `${Math.round(rect.left)}|${Math.round(rect.top)}|${Math.round(rect.width)}|${Math.round(rect.height)}|${Math.round(r*10)}`;
+      if(key === this.cacheKey) return;
+      this.cacheKey = key;
+
+      const spacing = 3.5;
+      const w = rect.width, h = rect.height;
+      const rr = Math.max(0, Math.min(r, w/2, h/2));
+
+      const straightTop = Math.max(0, w - 2*rr);
+      const straightSide = Math.max(0, h - 2*rr);
+      const arcLen = 0.5*Math.PI*rr;
+      const perim = straightTop*2 + straightSide*2 + arcLen*4;
+
+      const count = Math.max(180, Math.floor(perim / spacing));
+      this.points = [];
+      this.regionIdx = { top:[], right:[], bottom:[], left:[] };
+      this.level = new Array(count).fill(0);
+      this.val   = new Array(count).fill(0);
+      this.peak  = new Array(count).fill(0);
+
+      const x0 = rect.left, y0 = rect.top;
+
+      const add = (x,y,nx,ny) => {
+        let region = "top";
+        if(Math.abs(nx) > Math.abs(ny)){
+          region = (nx > 0) ? "right" : "left";
+        }else{
+          region = (ny > 0) ? "bottom" : "top";
+        }
+        const idx = this.points.length;
+        this.points.push({x,y,nx,ny, region, tInRegion:0, idxInRegion:0});
+        this.regionIdx[region].push(idx);
+      };
+
+      for(let i=0;i<count;i++){
+        let d = (i / count) * perim;
+
+        if(d <= straightTop){ add(x0 + rr + d, y0, 0,-1); continue; }
+        d -= straightTop;
+
+        if(d <= arcLen){
+          const t = (arcLen===0) ? 0 : d/arcLen;
+          const th = (-Math.PI/2) + t*(Math.PI/2);
+          const cx = x0 + w - rr, cy = y0 + rr;
+          add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+          continue;
+        }
+        d -= arcLen;
+
+        if(d <= straightSide){ add(x0 + w, y0 + rr + d, 1,0); continue; }
+        d -= straightSide;
+
+        if(d <= arcLen){
+          const t = (arcLen===0) ? 0 : d/arcLen;
+          const th = 0 + t*(Math.PI/2);
+          const cx = x0 + w - rr, cy = y0 + h - rr;
+          add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+          continue;
+        }
+        d -= arcLen;
+
+        if(d <= straightTop){ add(x0 + w - rr - d, y0 + h, 0,1); continue; }
+        d -= straightTop;
+
+        if(d <= arcLen){
+          const t = (arcLen===0) ? 0 : d/arcLen;
+          const th = (Math.PI/2) + t*(Math.PI/2);
+          const cx = x0 + rr, cy = y0 + h - rr;
+          add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+          continue;
+        }
+        d -= arcLen;
+
+        if(d <= straightSide){ add(x0, y0 + h - rr - d, -1,0); continue; }
+        d -= straightSide;
+
+        const t = (arcLen===0) ? 0 : (d/arcLen);
+        const th = Math.PI + t*(Math.PI/2);
+        const cx = x0 + rr, cy = y0 + rr;
+        add(cx + rr*Math.cos(th), cy + rr*Math.sin(th), Math.cos(th), Math.sin(th));
+      }
+
+      for(const region of ["top","right","bottom","left"]){
+        const idxs = this.regionIdx[region];
+        const N = idxs.length;
+        for(let j=0;j<N;j++){
+          const p = this.points[idxs[j]];
+          p.idxInRegion = j;
+          p.tInRegion = (N<=1) ? 0 : j/(N-1);
+        }
+      }
+    }
+
+    updateFromSpectrum(freq){
+      if(!this.points.length) return;
+      const fall = 0.78;
+      const peakFall = 0.92;
+
+      const startBin = 10;
+      const endBin = Math.min(freq.length-1, 640);
+      const band = Math.max(1, endBin - startBin);
+      const total = this.points.length;
+
+      const regionInfo = {};
+      for(const region of ["top","right","bottom","left"]){
+        const idxs = this.regionIdx[region];
+        regionInfo[region] = { N: idxs.length, center: (idxs.length-1)/2 };
+      }
+
+      for(let i=0;i<total;i++){
+        const p = this.points[i];
+        const info = regionInfo[p.region];
+        const dist = Math.abs(p.idxInRegion - info.center);
+        const delayBins = Math.min(band-1, Math.floor(dist)*3);
+
+        const bin = startBin + Math.floor(((i + delayBins) / total) * band);
+        const v = (freq[Math.min(endBin, Math.max(startBin, bin))] / 255);
+        const s = (v*v);
+
+        const next = Math.max(s, this.val[i]*fall);
+        this.val[i] = next;
+        this.peak[i] = Math.max(next, this.peak[i]*peakFall);
+
+        const cur = this.level[i];
+        const target = this.peak[i];
+        this.level[i] = (target > cur) ? cur + (target-cur)*0.55 : cur + (target-cur)*0.18;
+      }
+    }
+
+    draw(scalePx){
+      if(!this.points.length) return;
+      ctx.strokeStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 1;
+
+      const minLen = 2.5;
+      const maxLen = scalePx;
+
+      for(let i=0;i<this.points.length;i++){
+        const p = this.points[i];
+        const w = edgeWeight(p.tInRegion);
+        const L = minLen + this.level[i]*w*maxLen;
+
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.nx*L, p.y + p.ny*L);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  const getBtnRect = (el) => el ? el.getBoundingClientRect() : null;
+  const getRadiusFromEl = (el) => (rect) => {
+    try{
+      const br = getComputedStyle(el).borderRadius;
+      const n = parseFloat(br) || 12;
+      return n;
+    }catch(e){ return 12; }
+  };
+
+  const yesRad = new Radiator(()=>getBtnRect(yesEl), getRadiusFromEl(yesEl), '#00fff0');
+  const noRad  = new Radiator(()=>getBtnRect(noEl),  getRadiusFromEl(noEl),  '#ff004c');
+  const ovRad  = new Radiator(()=>getBtnRect(ovEl),  getRadiusFromEl(ovEl),  '#00fff0');
+
+  function tick(){
+    yesRad.build(); noRad.build(); ovRad.build();
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+
+    const hasSpectrum = (typeof analyser !== 'undefined' && analyser && typeof dataArr !== 'undefined' && dataArr);
+    const isPlaying = (typeof currentAudioEl !== 'undefined' && currentAudioEl && !currentAudioEl.paused);
+
+    const overlayActive = !tapOverlay.classList.contains('hidden');
+    const questionActive = !mainUI.classList.contains('hidden');
+    const noModalActive = noModal.classList.contains('active');
+    const transitionActive = transition.classList.contains('active');
+
+    const showYesNo = isPlaying && hasSpectrum && questionActive && !overlayActive && !noModalActive && !transitionActive;
+    const showOverlay = isPlaying && hasSpectrum && overlayActive;
+
+    if(hasSpectrum && isPlaying){
+      analyser.getByteFrequencyData(dataArr);
+
+      if(showYesNo){
+        yesRad.updateFromSpectrum(dataArr);
+        noRad.updateFromSpectrum(dataArr);
+
+        const yesGain = (typeof happySound !== 'undefined' && currentAudioEl === happySound) ? 52 : 46;
+        const noGain  = (typeof heartbeat !== 'undefined' && currentAudioEl === heartbeat) ? 58 : 42;
+
+        yesRad.draw(yesGain);
+        noRad.draw(noGain);
+      }
+
+      if(showOverlay){
+        ovRad.updateFromSpectrum(dataArr);
+        ovRad.draw(46);
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+/* ======================================================================= */
+</script>
+
+</body>
+</html>
