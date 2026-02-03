@@ -138,7 +138,7 @@ class Fighter extends Sprite {
 
 export const player = new Fighter({
   name: 'player',
-  position: { x: 100, y: 0 },
+  position: { x: 100, y: 330 },
   offset: { x: 75, y: 0 },
   imageSrc: '/dangerous_game/assets/img/samuraiMack/Idle.png',
   scale: 2.5,
@@ -159,7 +159,7 @@ export const player = new Fighter({
 
 export const enemy = new Fighter({
   name: 'enemy',
-  position: { x: 750, y: 0 },
+  position: { x: 750, y: 330 },
   offset: { x: -160, y: 0 },
   imageSrc: '/dangerous_game/assets/img/kenji/Idle.png',
   scale: 2.5,
